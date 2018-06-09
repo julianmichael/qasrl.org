@@ -1,0 +1,66 @@
+@import sitegen.rendering._
+@import sitegen.rendering.{Styles => S}
+@import sitegen.data._
+@import scalacss.ScalatagsCss._
+@import scalacss.DevDefaults._
+@html(lang := "en")
+  @head
+    @meta(charset := "utf-8")
+    @meta(
+      name := "viewport",
+      content := "width=device-width, initial-scale=1, shrink-to-fit=no")
+    @bootstrapLink,
+    @tag("title"){Julian Michael's Homepage}
+    @tag("style")(Styles.render)
+  @body(
+    style := "padding-top: 4.5rem; position: relative;",
+    attr("data-spy") := "scroll",
+    attr("data-target") := "#navbarCollapse",
+    attr("data-offset") := "200")
+    @Nav()
+
+    @tag("main")(id := "home", role := "main", S.anchor, S.mainContainer)
+      @div(S.leadBannerContainer)
+        @h1{Introducing QA-SRL Bank 2.0}
+        @p(S.leadText)
+          The first large-scale QA-SRL dataset and high-quality parser
+        @a(S.leadButton, cls := " btn-primary", href := "http://arxiv.org/abs/1805.05377", role := "button")
+          Read the paper »
+        @a(S.leadButton, cls := " btn-success", href := "https://github.com/uwnlp/qasrl-bank", role := "button")
+          Download »
+        @a(S.leadButton, cls := " btn-info", href := "https://github.com/nafitzgerald/nrl-qasrl", role := "button")
+          Get the code »
+
+      @p(S.expositoryText)
+        Semantic annotation by expert linguists has brought great progress to computational
+        natural language understanding, but these methods just aren't scalable to big
+        data. We propose a different approach: use natural language to annotate natural language,
+        in such a way that any native speaker can do the annotation.
+
+      @h2(S.anchor, id := "approaches"){Approaches}
+      @div(cls := "card")
+        @div(cls := "card-body")
+          @h4{QA-SRL}
+          @p
+            First introduced by
+            @References.he15qasrl.primaryPublication.newcite,
+            QA-SRL represents...
+      @h3{QAMR}
+      @p
+        Lorem ipsum dolor sit amet.
+      @h3{Open IE}
+      @p
+        Lorem ipsum dolor sit amet.
+
+      @h2(id := "publications", S.anchor)
+        Publications
+      @div(publications.map(renderRef))
+
+
+      @h2(id := "team", S.anchor)
+        Team
+      @div(cls := "container-fluid")
+        @div(cls := "row")(team.map(renderCollab))
+
+    @clipboardScripts
+    @bootstrapScripts

@@ -1,0 +1,26 @@
+@import sitegen.rendering._
+@html(lang := "en")
+  @head
+    @meta(charset := "utf-8")
+    @meta(name := "viewport", content := "width=device-width, initial-scale=1, shrink-to-fit=no")
+    @link(
+      rel := "stylesheet",
+      href := "https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css",
+      attr("integrity") := "sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm",
+      attr("crossorigin") := "anonymous")
+    @link(href := "styles.css", rel := "stylesheet", `type` := "text/css", media := "all")
+    @tag("title"){Error}
+
+  @body(
+    style := "padding-top: 4.5rem; position: relative;",
+    attr("data-spy") := "scroll",
+    attr("data-target") := "#navbarCollapse",
+    attr("data-offset") := "200")
+
+    @tag("main")(id := "home", role := "main", cls := "container anchor")
+      @div(cls := "jumbotron")
+        @h1{Error}
+        @p(cls := "lead")
+          Something went wrong. Probably a 404.
+
+    @bootstrapScripts

@@ -1,0 +1,3 @@
+[submodule "lib/sitegen"]
+	path = lib/sitegen
+	url = git@github.com:julianmichael/sitegen.git

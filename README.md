@@ -1,2 +1,1 @@
-# qasrl-website
-qasrl.org
+# qasrl.org
