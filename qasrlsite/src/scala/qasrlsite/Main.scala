@@ -4,7 +4,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 import scalacss.DevDefaults._
-import sitegen.rendering.Styles
+import sitegen.render.Styles
 
 import scalatags.Text.all.Frag
 

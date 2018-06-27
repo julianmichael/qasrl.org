@@ -1,6 +1,11 @@
+@package qasrlsite
+@import scalatags.Text.all.Frag
+@param brand: Frag
+@param sections: List[NavSection]
+
 @tag("nav")(cls := "navbar navbar-expand-md navbar-dark fixed-top bg-dark")
   @a(cls := "navbar-brand", href := "#home")
-    QA-SRL
+    @brand
   @button(cls := "navbar-toggler",
           tpe := "button",
           attr("data-toggle") := "collapse",
@@ -11,9 +16,7 @@
     @span(cls := "navbar-toggler-icon")
   @div(cls := "collapse navbar-collapse", id := "navbarCollapse")
     @ul(cls := "navbar-nav mr-auto")
-      @li(cls := "nav-item")
-        @a(cls := "nav-link", href := "#publications")
-          Publications
-      @li(cls := "nav-item")
-        @a(cls := "nav-link", href := "#team")
-          Team
+      @for(section <- sections)
+        @li(cls := "nav-item")
+          @a(cls := "nav-link", href := s"#${section.targetId}")
+            @section.linkElement
