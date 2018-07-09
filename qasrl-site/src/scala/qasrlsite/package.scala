@@ -1,7 +1,13 @@
 import sitegen.data.References
 import sitegen.data.Authors
 
+import ammonite.ops.RelPath
+
 package object qasrlsite {
+
+  val browserScriptLocation = RelPath.empty / "scripts" / "browser.js"
+  val browserScriptDepsLocation = RelPath.empty / "scripts" / "browser-deps.js"
+
   val publications = {
     import References._
     List(
@@ -23,6 +29,7 @@ package object qasrlsite {
       luhengHe,
       nicholasFitzgerald,
       gabiStanovsky,
+      ayalKlein,
       idoDagan,
       lukeZettlemoyer
     )

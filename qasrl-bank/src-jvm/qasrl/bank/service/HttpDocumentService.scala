@@ -1,0 +1,48 @@
+package qasrl.bank
+
+import nlpdata.util.LowerCaseStrings._
+
+import cats.implicits._
+import cats.effect._
+
+import org.http4s._
+import org.http4s.implicits._
+
+// import org.http4s.server.blaze._
+// import fs2.{Stream, StreamApp}
+// import fs2.StreamApp.ExitCode
+
+import scala.concurrent.ExecutionContext.Implicits.global
+
+object HttpDocumentService {
+
+  import cats.Order.catsKernelOrderingForOrder
+  import io.circe.Encoder
+
+  val dataIndexEncoder: Encoder[DataIndex] = {
+    import io.circe.generic.auto._
+    implicitly[Encoder[DataIndex]]
+  }
+  val documentEncoder: Encoder[Document] = {
+    import qasrl.data.JsonCodecs._
+    import io.circe.generic.auto._
+    implicitly[Encoder[Document]]
+  }
+
+  def makeService(
+    index: DataIndex,
+    documents: Map[DocumentId, Document]
+  ) = {
+    implicit val die = dataIndexEncoder
+    implicit val de = documentEncoder
+    import io.circe.syntax._
+    import org.http4s.dsl.io._
+    import org.http4s.circe._
+    HttpService[IO] {
+      case GET -> Root / "index" =>
+        Ok(index.asJson)
+      case GET -> Root / "doc" / domain / id =>
+        Ok(documents(DocumentId(Domain.fromString(domain.lowerCase).get, id)).asJson)
+    }
+  }
+}

@@ -1,3 +1,5 @@
 out
 site/index.html
 site/error.html
+site/browser.html
+site/scripts/*

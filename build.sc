@@ -4,13 +4,23 @@ import ammonite.ops._
 
 val thisScalaVersion = "2.12.6"
 val thisScalaJSVersion = "0.6.23"
-val scalatagsVersion = "0.6.7"
+
+val macroParadiseVersion = "2.1.0"
+val kindProjectorVersion = "0.9.4"
+
+// cats libs -- maintain version agreement or whatever
 val catsVersion = "1.1.0"
+val nlpdataVersion = "0.2.0-SNAPSHOT"
+val qasrlVersion = "0.1.0-SNAPSHOT"
+val circeVersion = "0.9.3"
+val http4sVersion = "0.18.14"
+
+val scalatagsVersion = "0.6.7"
 val scalacssVersion = "0.5.3"
 val monocleVersion = "1.4.0"
 
-val scalajsDomVersion = "0.9.0"
-val scalajsJqueryVersion = "0.9.0"
+val scalajsDomVersion = "0.9.6"
+val scalajsJqueryVersion = "0.9.3"
 val scalajsReactVersion = "1.1.0"
 val scalajsScalaCSSVersion = "0.5.3"
 
@@ -23,33 +33,50 @@ object sitegen extends SitegenBuild.SitegenTrait {
 }
 
 trait CommonModule extends ScalaModule {
-
-  def scalaVersion = thisScalaVersion
-
   def scalacOptions = Seq(
     "-unchecked",
     "-deprecation",
     "-feature",
+    "-language:higherKinds",
     "-Ypartial-unification"
   )
-
-  // resolvers sonatype snapshots
-  // def repositories = super.repositories ++ Seq(
-  //   MavenRepository("https://oss.sonatype.org/content/repositories/snapshots")
-  // )
-
-  def ivyDeps = super.ivyDeps() ++ Agg(
-    // ivy"com.lihaoyi::scalatags::$scalatagsVersion",
-    // ivy"org.typelevel::cats-core::$catsVersion",
-    // ivy"com.github.japgolly.scalacss::core:$scalacssVersion",
-    // ivy"com.github.japgolly.scalacss::ext-scalatags:$scalacssVersion"
+  def scalacPluginIvyDeps = super.scalacPluginIvyDeps() ++ Agg(
+    ivy"org.scalamacros:::paradise:$macroParadiseVersion",
+    ivy"org.spire-math::kind-projector:$kindProjectorVersion"
   )
 }
 
+trait CommonMainModule extends CommonModule {
+  def scalaVersion = thisScalaVersion
+}
+
+trait CrossPlatformModule extends ScalaModule {
+  def platformSegment: String
+
+  def sources = T.sources(
+    millSourcePath / "src",
+    millSourcePath / s"src-$platformSegment"
+  )
+
+}
+
+trait JvmPlatform extends CrossPlatformModule {
+  def platformSegment = "jvm"
+}
+
+trait JsPlatform extends CrossPlatformModule with ScalaJSModule {
+  def scalaJSVersion = T(thisScalaJSVersion)
+  def platformSegment = "js"
+}
+
 import $file.lib.sitegen.scripts.ScalatexBuild
-object qasrlsite extends CommonModule with ScalatexBuild.ScalatexModule {
+object `qasrl-site` extends CommonMainModule with ScalatexBuild.ScalatexModule {
 
   def moduleDeps = Seq(sitegen)
+
+  def ivyDeps = super.ivyDeps() ++ Agg(
+    ivy"com.lihaoyi::ammonite-ops:1.1.2"
+  )
 
   def scalatexSources = T.sources(
     millSourcePath / "src" / "scalatex"
@@ -58,52 +85,135 @@ object qasrlsite extends CommonModule with ScalatexBuild.ScalatexModule {
   def sources = T.sources(
     millSourcePath / "src" / "scala"
   )
+
+  def runFn = T.task { (args: Seq[String]) =>
+    import mill.modules.Jvm
+    import mill.eval.Result
+    try Result.Success(Jvm.interactiveSubprocess(
+                         finalMainClass(),
+                         runClasspath().map(_.path),
+                         forkArgs(),
+                         forkEnv(),
+                         args,
+                         workingDir = ammonite.ops.pwd
+                       )) catch { case e: InteractiveShelloutException =>
+        Result.Failure("subprocess failed")
+    }
+  }
+
+  def generate() = T.command {
+    val browserJSPath = `qasrl-browser`.js.fastOpt().path.toString
+    val browserJSDepsPath = `qasrl-browser`.js.aggregatedJSDeps().path.toString
+    val run = runFn()
+    run(Seq(browserJSPath, browserJSDepsPath))
+  }
 }
 
-// TODO use scalatex with JS as well
-trait QASRLBrowserModule extends CommonModule with ScalaModule {
+// trait QasrlServiceModule extends CommonMainModule with CrossPlatformModule {
 
-  def platformSegment: String
+//   def scalacOptions = super.scalacOptions() ++ Seq(
+//     "-language:higherKinds"
+//   )
 
-  def ivyDeps = super.ivyDeps() ++ Agg(
-    // ivy"com.github.julien-truffaut::monocle-core::$monocleVersion",
-    // ivy"com.github.julien-truffaut::monocle-macro::$monocleVersion",
-    // ivy"com.github.julianmichael::qasrl::0.1-SNAPSHOT"
-    // ivy"com.softwaremill.macmemo::macros:$macmemoVersion"
-  )
+//   def millSourcePath = build.millSourcePath / "qasrl-service"
 
-  // def scalacPluginIvyDeps = super.scalacPluginIvyDeps() ++ Agg(
-  //   ivy"org.scalamacros:::paradise:$macroParadiseVersion"
-  // )
+//   def ivyDeps = super.ivyDeps() ++ Agg(
+//     ivy"org.julianmichael::qasrl::$qasrlVersion",
+//     ivy"org.typelevel::cats-core::$catsVersion",
+//     ivy"io.circe::circe-core::$circeVersion",
+//     ivy"io.circe::circe-generic::$circeVersion",
+//     ivy"io.circe::circe-parser::$circeVersion"
+//     // ivy"org.http4s::http4s-core::$http4sVersion"
+//   )
 
-  def sourcePath = build.millSourcePath / "qasrlbrowser"
+//   trait QasrlServiceTestModule extends Tests with CommonModule with CrossPlatformModule {
+//     def platformSegment = QasrlServiceModule.this.platformSegment
+//     def ivyDeps = Agg(
+//       ivy"org.scalatest::scalatest:3.0.1"
+//       // ivy"org.scalacheck::scalacheck:1.13.4",
+//       // ivy"org.typelevel::discipline:0.7.3"
+//     )
+//     def testFrameworks = Seq("org.scalatest.tools.Framework")
+//   }
 
-  def sources = T.sources(
-    sourcePath / platformSegment / "src" / "scala",
-    sourcePath / "shared" / "src" / "scala"
-  )
-}
-
-// object qasrlbrowserJVM extends QASRLBrowserModule {
-//   def platformSegment = "jvm"
+// }
+// object `qasrl-service` extends Module {
+//   object jvm extends QasrlServiceModule with JvmPlatform {
+//     def ivyDeps = super.ivyDeps() ++ Agg(
+//       ivy"org.http4s::http4s-core::$http4sVersion"
+//     )
+//     object test extends QasrlServiceTestModule
+//   }
+//   object js extends QasrlServiceModule with JsPlatform {
+//     object test extends QasrlServiceTestModule
+//   }
 // }
 
-object qasrlbrowserJS extends QASRLBrowserModule with ScalaJSModule {
-  def scalaJSVersion = thisScalaJSVersion
-  def platformSegment = "js"
+trait QASRLBrowserModule extends CommonMainModule {
+  def millSourcePath = build.millSourcePath / "qasrl-browser"
+}
 
-  // def scalaLibraryIvyDeps = super.scalaLibraryIvyDeps() ++ Agg(
-  //   ivy"org.scala-lang:scala-library:${scalaVersion()}".forceVersion(),
-  //   ivy"org.scala-lang:scala-reflect:${scalaVersion()}".forceVersion()
-  // )
+import $file.lib.sitegen.scripts.SimpleJSDepsBuild
+
+object `qasrl-browser` extends Module {
+  object jvm extends QASRLBrowserModule with ScalatexBuild.ScalatexModule with JvmPlatform {
+    // def moduleDeps = super.moduleDeps() ++ Seq(
+    //   `qasrl-bank`.jvm,
+    //   `qasrl-service`.jvm
+    // )
+  }
+  object js extends QASRLBrowserModule with JsPlatform with SimpleJSDepsBuild.SimpleJSDeps /* with ScalatexReactJSModule */ {
+    def moduleDeps = Seq(
+      `qasrl-bank`.js
+    )
+
+    def mainClass = T(Some("qasrlbrowser.Main"))
+
+    def ivyDeps = super.ivyDeps() ++ Agg(
+      ivy"org.julianmichael::qasrl::$qasrlVersion",
+      ivy"org.julianmichael::nlpdata::$nlpdataVersion",
+      ivy"com.github.julien-truffaut::monocle-core::$monocleVersion",
+      ivy"com.github.julien-truffaut::monocle-macro::$monocleVersion",
+      ivy"org.scala-js::scalajs-dom::$scalajsDomVersion",
+      ivy"com.github.japgolly.scalajs-react::core::$scalajsReactVersion",
+      ivy"com.github.japgolly.scalajs-react::ext-monocle::$scalajsReactVersion",
+      ivy"com.github.japgolly.scalajs-react::ext-cats::$scalajsReactVersion",
+      ivy"com.github.japgolly.scalacss::ext-react::$scalajsScalaCSSVersion"
+    )
+
+    // def jsDeps = Agg(
+    //   "https://cdnjs.cloudflare.com/ajax/libs/react/15.6.1/react.js",
+    //   "https://cdnjs.cloudflare.com/ajax/libs/react/15.6.1/react-dom.js"
+    // )
+  }
+}
+
+trait QasrlBankModule extends CommonMainModule {
+
+  def millSourcePath = build.millSourcePath / "qasrl-bank"
 
   def ivyDeps = super.ivyDeps() ++ Agg(
-    // ivy"org.scala-js::scalajs-dom::$scalajsDomVersion",
-    // ivy"be.doeraene::scalajs-jquery::$scalajsJqueryVersion",
-    // ivy"com.github.japgolly.scalajs-react::core::$scalajsReactVersion",
-    // ivy"com.github.japgolly.scalajs-react::ext-monocle::$scalajsReactVersion",
-    // ivy"com.github.japgolly.scalajs-react::ext-cats::$scalajsReactVersion",
-    // ivy"com.github.japgolly.scalacss::ext-react::$scalajsScalaCSSVersion"
+    ivy"org.julianmichael::qasrl::$qasrlVersion",
+    ivy"org.typelevel::cats-free::$catsVersion",
+    ivy"io.circe::circe-core::$circeVersion",
+    ivy"io.circe::circe-generic::$circeVersion"
   )
+}
 
+object `qasrl-bank` extends Module {
+  object jvm extends QasrlBankModule with JvmPlatform {
+    def ivyDeps = super.ivyDeps() ++ Agg(
+      ivy"org.http4s::http4s-dsl::$http4sVersion",
+      ivy"org.http4s::http4s-blaze-server::$http4sVersion",
+      ivy"org.http4s::http4s-circe::$http4sVersion"
+      // Optional for string interpolation to JSON model
+      // "io.circe" %% "circe-literal" % "0.9.3"
+    )
+  }
+  object js extends QasrlBankModule with JsPlatform {
+    def ivyDeps = super.ivyDeps() ++ Agg(
+      ivy"io.circe::circe-parser::$circeVersion",
+      ivy"org.scala-js::scalajs-dom::$scalajsDomVersion"
+    )
+  }
 }

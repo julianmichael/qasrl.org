@@ -10,10 +10,10 @@
   high-quality @a(href := "https://github.com/nafitzgerald/nrl-qasrl"){model}!
   The paper, @render.nameciteAnchor(fitzGerald18qasrl), will appear at ACL 2018.
 @li
-  @render.author(julianMichael) presented
+  @render.authorShort(julianMichael) presented
   @render.nameciteAnchor(michael18qamr)
   at NAACL 2018 in New Orleans.
 @li
-  @render.author(gabiStanovsky) presented
+  @render.authorShort(gabiStanovsky) presented
   @render.nameciteAnchor(stanovsky18supoie)
   at NAACL 2018 in New Orleans.

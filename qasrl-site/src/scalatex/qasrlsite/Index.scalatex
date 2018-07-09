@@ -55,7 +55,9 @@
         @a(S.leadButton, S.leadButton3, href := "https://github.com/nafitzgerald/nrl-qasrl", role := "button")
           Model »
 
-      @sectionHeading("about", "About"){About the QA-SRL Project}
+      @sectionHeading("about", "About")(
+        "About the\nQA-SRL Project"
+      )
       @p
         We are a @a(href := "#team"){group of researchers} spanning
         the @a(href := "https://www.cs.washington.edu/"){University of Washington},
