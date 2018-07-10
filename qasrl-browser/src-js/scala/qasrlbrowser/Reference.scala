@@ -30,19 +30,35 @@ class ReferenceComponent[A <: vdom.TopNode] {
     def expireRef: Callback = Callback(isRefOld = true)
 
     def setReference: Callback =
-      Callback(println(s"Reference: $referenceOpt")) >>
-        Callback(isRefOld = false) >>
+      Callback(isRefOld = false) >>
         scope.setState(referenceOpt)
+
+    val setReferenceFn = () => setReference.runNow
 
     def render(props: Props, state: Option[A]) =
       props.render(props.referencedTag.ref(node => referenceOpt = Some(node)), state)
   }
 
+  import scala.scalajs.js
   val Component = ScalaComponent
     .builder[Props]("Reference")
     .initialState(None: State)
     .renderBackend[Backend]
-    .componentDidMount(_.backend.setReference)
+    .componentDidMount(context =>
+    context.backend.setReference >>
+      Callback(
+        js.Dynamic.global.window.addEventListener(
+          "resize", context.backend.setReferenceFn
+        )
+      )
+  )
+    .componentWillUnmount(context =>
+    Callback(
+      js.Dynamic.global.window.removeEventListener(
+        "resize", context.backend.setReferenceFn
+      )
+    )
+  )
     .componentWillReceiveProps(_.backend.expireRef)
     .componentDidUpdate(context =>
     if(context.backend.isRefOld) {

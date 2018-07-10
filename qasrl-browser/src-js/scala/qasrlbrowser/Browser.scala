@@ -264,11 +264,9 @@ object Browser {
       ) { case (sentBox, sentBoxRefOpt) =>
           <.div(S.sentenceDisplayPane)(
             sentBox,
-            sentBoxRefOpt.fold(<.div(S.loadingNotice)("AAAAHH")) { sentenceBoxRef =>
+            sentBoxRefOpt.fold(<.div()) { sentenceBoxRef =>
               val rect = sentenceBoxRef.getBoundingClientRect
-              println(rect)
               val height = math.round(rect.height)
-              println(height)
               <.div(S.verbEntriesContainer)(
                 ^.paddingTop := s"${height}px",
                 curSentence.verbEntries.values.toList.sortBy(_.verbIndex).toVdomArray { verb =>
