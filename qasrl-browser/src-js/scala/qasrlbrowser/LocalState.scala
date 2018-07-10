@@ -25,21 +25,13 @@ class LocalStateComponent[A] {
   type Context = A => Callback
   case class Props(
     initialValue: A,
-    render: (State, Context) => VdomElement
+    shouldRefresh: A => Boolean = _ => true,
+    render: StateVal[A] => VdomElement
   )
-
-  object Props {
-
-    def apply(render: (State, Context) => VdomElement)(
-      implicit m: Monoid[A]
-    ): Props =
-      Props(m.empty, render)
-  }
 
   class Backend(scope: BackendScope[Props, State]) {
     def set(a: A): Callback = scope.setState(a)
-    val context = set _
-    def render(props: Props, state: State) = props.render(state, context)
+    def render(props: Props, state: State) = props.render(StateVal(state, set _))
   }
 
   val Component = ScalaComponent
@@ -47,25 +39,29 @@ class LocalStateComponent[A] {
     .initialStateFromProps(_.initialValue)
     .renderBackend[Backend]
     .componentWillReceiveProps(context =>
-    if(context.currentProps.initialValue == context.nextProps.initialValue) {
-      Callback.empty
-    } else {
+    if(context.currentProps.initialValue != context.nextProps.initialValue &&
+         context.nextProps.shouldRefresh(context.state)
+    ) {
       context.backend.set(context.nextProps.initialValue)
-    }
+    } else Callback.empty
   )
     .build
 
   def make(
-    initialValue: A)(
-    render: (State, Context) => VdomElement
+    initialValue: A,
+    shouldRefresh: A => Boolean = _ => true
+    )(
+    render: StateVal[A] => VdomElement
   ) = {
-    Component(Props(initialValue, render))
+    Component(Props(initialValue, shouldRefresh, render))
   }
 
-  def makeEmptyInit(
-    render: (State, Context) => VdomElement)(
-    implicit M: Monoid[A]
-  ) = {
-    Component(Props(M.empty, render))
-  }
+  // def makeEmptyInit(
+  //   shouldRefresh: A => Boolean = _ => true
+  // )(
+  //   render: StateVal[A] => VdomElement)(
+  //   implicit M: Monoid[A]
+  // ) = {
+  //   Component(Props(M.empty, shouldRefresh, render))
+  // }
 }

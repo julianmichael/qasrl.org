@@ -6,6 +6,14 @@ import scala.language.postfixOps
 object BrowserStyles extends StyleSheet.Inline {
   import dsl._
 
+  val checkbox = style(
+    addClassNames("form-check-input")
+  )
+
+  val checkboxLabel = style(
+    addClassNames("form-check-label")
+  )
+
   val webkitScrollbar = {
     import scalacss.internal._
     Cond(Some(Pseudo.Custom("::-webkit-scrollbar", PseudoType.Element)), Vector.empty)
@@ -15,38 +23,81 @@ object BrowserStyles extends StyleSheet.Inline {
     addClassNames("container-fluid", "p-0", "m-0")
   )
 
-  // settings
+  // header
 
-  val settingsHeight = 100 px
+  val headerHeight = 100 px
 
-  val settingsContainer = style(
+  val flexyHeaderThing = style(
     display.flex,
-    alignItems.center,
-    justifyContent.center,
+    // alignItems.center,
+    // justifyContent.center,
     position.relative,
-    zIndex(10),
-    height(settingsHeight)
+    zIndex(10)
   )
 
-  val partitionChooser = style()
-  val domainChooser = style()
-  val denseOnlyToggle = style()
+  val headerContainer = style(
+    addClassNames("p-2"),
+    flexyHeaderThing,
+    height(headerHeight)
+  )
+
+  val titleAndSearchContainer = style()
+
+  // title
+
+  val title = style()
+
+  // search
+
+  val searchContainer = style(
+    flexyHeaderThing,
+    width(100 %%)
+  )
+
+  val searchInput = style()
+  val searchClearButton = style()
+
+  // filters
+
+  val filterContainer = style(
+    addClassNames("px-4"),
+    flexyHeaderThing
+  )
+
+  val filterChooser = style(
+    addClassNames("form-check", "px-3")
+  )
+
+  val partitionTitle = style()
+  val partitionChooser = style(
+    filterChooser
+  )
+
+  val domainTitle = style()
+  val domainChooser = style(
+    filterChooser
+  )
+
+  val denseOnlyTitle = style()
+  val denseOnlyChooser = style(
+    filterChooser
+  )
 
   // main data display
 
   val dataContainer = style(
-    display.flex,
-    overflow.hidden,
-    height(100 vh),
-    marginTop(-settingsHeight),
-    paddingTop(settingsHeight),
     position.relative,
-    width(100 %%),
+    overflow.hidden,
     backfaceVisibility.hidden,
-    willChange := "overflow"
+    willChange := "overflow",
+    display.flex,
+    height(100 vh),
+    marginTop(-headerHeight),
+    paddingTop(headerHeight),
+    width(100 %%)
   )
 
-  val dataPane = style(
+  val scrollPane = style(
     overflow.auto,
     height.auto,
     webkitScrollbar(
@@ -58,19 +109,31 @@ object BrowserStyles extends StyleSheet.Inline {
 
   // selection of sentences
 
+  val countLabelHeight = 1 rem
+  val countLabelFontSize = 8 pt
+
+  val documentSelectionPaneWidth = 10 rem
+  val sentenceSelectionPaneWidth = 12 rem
+
+  val documentSelectionFontSize = 12 pt
+  val sentenceSelectionFontSize = 10 pt
+
   val selectionPane = style(
-    dataPane,
+    scrollPane,
+    paddingTop(countLabelHeight),
   )
 
-  val documentSelectionPane = style(
-    selectionPane,
-    width(10 rem)
+  val countLabel = style(
+    position.fixed,
+    top(headerHeight),
+    height(countLabelHeight),
+    backgroundColor.white,
+    fontSize(countLabelFontSize),
+    textAlign.right,
+    verticalAlign.middle
   )
-
-  val sentenceSelectionPane = style(
-    selectionPane,
-    width(12 rem),
-    fontSize(10 pt)
+  val countLabelText = style(
+    addClassNames("px-1")
   )
 
   val selectionEntry = style(
@@ -89,9 +152,52 @@ object BrowserStyles extends StyleSheet.Inline {
     selectionEntry
   )
 
-  val selectionEntryText = style(
-    fontSize(12 pt)
+  val documentCountLabel = style(
+    countLabel,
+    width(documentSelectionPaneWidth)
   )
+
+  val documentCountLabelText = style(
+    countLabelText
+  )
+
+  val documentSelectionPane = style(
+    selectionPane,
+    width(documentSelectionPaneWidth)
+  )
+
+  val documentSelectionEntry = style(
+    selectionEntry
+  )
+
+  val documentSelectionEntryText = style(
+    fontSize(documentSelectionFontSize)
+  )
+
+  val sentenceCountLabel = style(
+    countLabel,
+    left(documentSelectionPaneWidth),
+    width(sentenceSelectionPaneWidth)
+  )
+
+  val sentenceCountLabelText = style(
+    countLabelText
+  )
+
+  val sentenceSelectionPane = style(
+    selectionPane,
+    width(sentenceSelectionPaneWidth)
+  )
+
+  val sentenceSelectionEntry = style(
+    selectionEntry
+  )
+
+  val sentenceSelectionEntryText = style(
+    fontSize(sentenceSelectionFontSize)
+  )
+
+  // display of document biggy thing
 
   val documentContainer = style(
     flex := "1",
@@ -106,7 +212,7 @@ object BrowserStyles extends StyleSheet.Inline {
 
   val sentenceDisplayPane = style(
     fontSize(12 pt),
-    dataPane,
+    scrollPane,
     addClassNames("p-3"),
     flex := "1"
   )
