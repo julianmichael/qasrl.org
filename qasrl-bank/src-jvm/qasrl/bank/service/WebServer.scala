@@ -13,6 +13,9 @@ import fs2.StreamApp.ExitCode
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
+import nlpdata.util.Text
+import nlpdata.util.LowerCaseStrings._
+
 object WebServerMain extends StreamApp[IO] {
   override def stream(args: List[String], requestShutdown: IO[Unit]): Stream[IO, ExitCode] = {
 
@@ -28,9 +31,21 @@ object WebServerMain extends StreamApp[IO] {
 
     println("Loading data...")
     val (index, docs) = data.indexDocuments(Wiki1k, tqaMapping)
-    println("Data loaded.")
+    println("Data loaded. Indexing documents...")
+    val searchIndex = {
+      def tokenDocPairs = for {
+        doc <- docs.values.iterator
+        sent <- doc.sentences.iterator
+        initTok <- sent.sentenceTokens.iterator
+        tok <- List(initTok, Text.normalizeToken(initTok)).iterator
+      } yield tok.lowerCase -> doc.metadata.id
 
-    val service = HttpDocumentService.makeService(index, docs)
+      tokenDocPairs.toList.groupBy(_._1).map { case (tok, pairs) =>
+        tok -> pairs.map(_._2).toSet
+      }
+    }
+
+    val service = HttpDocumentService.makeService(index, docs, searchIndex)
 
     BlazeBuilder[IO]
       .bindHttp(8080, "localhost")

@@ -28,13 +28,20 @@ object HttpDocumentService {
     import io.circe.generic.auto._
     implicitly[Encoder[Document]]
   }
+  val documentIdSetEncoder: Encoder[Set[DocumentId]] = {
+    import qasrl.data.JsonCodecs._
+    import io.circe.generic.auto._
+    implicitly[Encoder[Set[DocumentId]]]
+  }
 
   def makeService(
     index: DataIndex,
-    documents: Map[DocumentId, Document]
+    documents: Map[DocumentId, Document],
+    searchIndex: Map[LowerCaseString, Set[DocumentId]]
   ) = {
     implicit val die = dataIndexEncoder
     implicit val de = documentEncoder
+    implicit val dise = documentIdSetEncoder
     import io.circe.syntax._
     import org.http4s.dsl.io._
     import org.http4s.circe._
@@ -43,6 +50,16 @@ object HttpDocumentService {
         Ok(index.asJson)
       case GET -> Root / "doc" / domain / id =>
         Ok(documents(DocumentId(Domain.fromString(domain.lowerCase).get, id)).asJson)
+      case GET -> Root / "search" / query =>
+        val keywords = query.split(" ").map(_.lowerCase).toSet
+        if(keywords.isEmpty) {
+          Ok(documents.keySet)
+        } else {
+          val results = keywords
+            .map(w => searchIndex.get(w).getOrElse(Set.empty[DocumentId]))
+            .reduce(_ intersect _)
+          Ok(results.asJson)
+        }
     }
   }
 }

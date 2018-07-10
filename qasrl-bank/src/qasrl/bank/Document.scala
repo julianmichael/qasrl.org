@@ -2,7 +2,7 @@ package qasrl.bank
 
 import cats.Order
 
-import scala.collection.SortedSet
+import scala.collection.immutable.SortedSet
 
 import qasrl.data.Sentence
 

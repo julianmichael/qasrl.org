@@ -4,8 +4,10 @@ import qasrl.bank.DataIndex
 import qasrl.bank.Document
 import qasrl.bank.DocumentId
 
+import cats.Monad
 import cats.~>
 import cats.Id
+import cats.implicits._
 
 import io.circe.parser.decode
 
@@ -32,10 +34,17 @@ case class WebClientDocumentServiceInterpreter(
     import qasrl.bank.qasrlDataSentenceOrder
     implicitly[Decoder[Document]]
   }
+  val documentIdSetDecoder: Decoder[Set[DocumentId]] = {
+    import qasrl.data.JsonCodecs._
+    import io.circe.generic.auto._
+    import qasrl.bank.qasrlDataSentenceOrder
+    implicitly[Decoder[Set[DocumentId]]]
+  }
 
   def apply[A](req: RequestA[A]): CacheCall[A] = {
     implicit val did = dataIndexDecoder
     implicit val dd = documentDecoder
+    implicit val disd = documentIdSetDecoder
 
     req match {
       case GetDataIndex => indexCache match {
@@ -65,6 +74,16 @@ case class WebClientDocumentServiceInterpreter(
           }
         )
       }
+      case SearchDocuments(query) => if(query.isEmpty) {
+        this(GetDataIndex).map(index => index.allDocuments.map(_.id))
+      } else Remote( // never cached when query is nonempty
+        sendRequest(SearchDocuments(query)).map(_.responseText).flatMap { documentIdSetJsonStr =>
+          decode[Set[DocumentId]](documentIdSetJsonStr) match {
+            case Left(err) => Future.failed[Set[DocumentId]](new RuntimeException(err))
+            case Right(documentIds) => Future.successful(documentIds)
+          }
+        }
+      )
     }
   }
 
@@ -79,6 +98,7 @@ case class WebClientDocumentServiceInterpreter(
   private[this] def getRoute[A](req: RequestA[A]): String = req match {
     case GetDataIndex => s"index"
     case GetDocument(id) => s"doc/${id.domain}/${id.id}"
+    case SearchDocuments(query) => s"search/${query.mkString(" ")}"
   }
 }
 
@@ -86,4 +106,4 @@ class WebClientDocumentService(
   apiUrl: String,
 ) extends InterpretedDocumentService[CacheCall](
   WebClientDocumentServiceInterpreter(apiUrl)
-)(CacheCall.cacheCallInstance)
+)

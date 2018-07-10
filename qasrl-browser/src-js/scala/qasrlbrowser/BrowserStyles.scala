@@ -121,6 +121,7 @@ object BrowserStyles extends StyleSheet.Inline {
   val selectionPane = style(
     scrollPane,
     paddingTop(countLabelHeight),
+    lineHeight(1.2)
   )
 
   val countLabel = style(
@@ -194,7 +195,7 @@ object BrowserStyles extends StyleSheet.Inline {
   )
 
   val sentenceSelectionEntryText = style(
-    fontSize(sentenceSelectionFontSize)
+    fontSize(sentenceSelectionFontSize),
   )
 
   // display of document biggy thing
@@ -217,7 +218,17 @@ object BrowserStyles extends StyleSheet.Inline {
     flex := "1"
   )
 
-  val loadingNotice = style()
+  val sentenceTextContainer = style(
+    position.fixed,
+    top(headerHeight),
+    backgroundColor.white
+  )
+
+  val verbEntriesContainer = style()
+
+  val loadingNotice = style(
+    addClassNames("p-3")
+  )
 
   val sentenceText = style(
     fontSize(16 pt)

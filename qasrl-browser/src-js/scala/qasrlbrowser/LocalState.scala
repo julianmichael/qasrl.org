@@ -49,8 +49,7 @@ class LocalStateComponent[A] {
 
   def make(
     initialValue: A,
-    shouldRefresh: A => Boolean = _ => true
-    )(
+    shouldRefresh: A => Boolean = _ => true)(
     render: StateVal[A] => VdomElement
   ) = {
     Component(Props(initialValue, shouldRefresh, render))

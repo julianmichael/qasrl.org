@@ -16,7 +16,7 @@ case class Cached[A](value: A) extends CacheCall[A]
 case class Remote[A](future: Future[A]) extends CacheCall[A]
 
 object CacheCall {
-  def cacheCallInstance(implicit ec: ExecutionContext): Monad[CacheCall] =
+  implicit def cacheCallInstance(implicit ec: ExecutionContext): Monad[CacheCall] =
     new StackSafeMonad[CacheCall] {
 
       override def pure[A](a: A): CacheCall[A] = Cached(a)

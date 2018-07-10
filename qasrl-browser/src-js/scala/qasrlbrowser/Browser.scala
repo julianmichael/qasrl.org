@@ -1,11 +1,11 @@
 package qasrlbrowser
 
 import cats.Id
-import cats.data.NonEmptyList
 import cats.implicits._
 
 import scalajs.js
 import org.scalajs.dom
+import org.scalajs.dom.html
 import org.scalajs.dom.ext.KeyCode
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -44,20 +44,22 @@ import scala.collection.immutable.SortedSet
 object Browser {
 
   val IndexFetch = new CacheCallContentComponent[Unit, DataIndex]
+  val SearchFetch = new CacheCallContentComponent[Set[LowerCaseString], Set[DocumentId]]
   val DocMetaLocal = new LocalStateComponent[DocumentMetadata]
   val DocFetch = new CacheCallContentComponent[DocumentId, Document]
   val SentLocal = new LocalStateComponent[Sentence]
+  val DivReference = new ReferenceComponent[html.Div]
 
   case class Props(
     qasrl: DocumentService[CacheCall]
   )
 
   @Lenses case class Search(
-    curText: String,
-    keywords: Option[NonEmptyList[LowerCaseString]]
+    text: String,
+    query: Set[LowerCaseString]
   )
   object Search {
-    def initial = Search("", None)
+    def initial = Search("", Set.empty[LowerCaseString])
   }
 
   @Lenses case class Filters(
@@ -84,9 +86,19 @@ object Browser {
     def tqa       = fs.domains composeLens atDomain(Domain.TQA)
   }
 
-  def curDocuments(index: DataIndex, filter: Filters) = {
+  def getCurDocuments(
+    index: DataIndex,
+    searchedIds: Set[DocumentId],
+    filter: Filters,
+    denseIds: Set[DocumentId],
+  ) = {
     filter.partitions.iterator.map(
-      part => index.documents(part).filter(doc => filter.domains.contains(doc.id.domain))
+      part => index.documents(part)
+        .filter(doc =>
+        filter.domains.contains(doc.id.domain) &&
+          searchedIds.contains(doc.id) &&
+          (!filter.denseOnly || denseIds.contains(doc.id))
+      )
     ).reduce(_ union _)
   }
 
@@ -127,21 +139,23 @@ object Browser {
       <.input(S.searchInput)(
         ^.`type` := "text",
         ^.placeholder := "Keyword search",
-        ^.value := search.get.curText,
-        ^.onChange ==> ((e: ReactEventFromInput) => search.zoom(Search.curText).set(e.target.value)),
+        ^.value := search.get.text,
+        ^.onChange ==> ((e: ReactEventFromInput) => search.zoom(Search.text).set(e.target.value)),
         ^.onKeyDown ==> (
           (e: ReactKeyboardEvent) => {
-            println(e.keyCode)
+            val query = search.get.text.split("\\s+")
+              .map(_.trim).toSet
+              .filter(_.nonEmpty)
+              .map((s: String) => s.lowerCase)
             CallbackOption.keyCodeSwitch(e) {
-              case KeyCode.Enter => search.zoom(Search.keywords).set(
-                NonEmptyList.fromList(search.get.curText.split("\\s+").toList.map(_.lowerCase))
-              )
+              case KeyCode.Enter => search.zoom(Search.query).set(query)
             }
           }
         )
       ),
       <.button(S.searchClearButton)(
-        ^.disabled := search.get.keywords.isEmpty,
+        ^.disabled := search.get.query.isEmpty,
+        ^.onClick --> search.zoom(Search.query).set(Set.empty[LowerCaseString]),
         "Clear"
       )
       // s"Current query: ${search.get.keywords.fold("")(_.mkString(", "))}"
@@ -150,11 +164,10 @@ object Browser {
 
   def filterPane(filter: StateVal[Filters]) = {
     <.div(S.filterContainer)(
-      // <.h5(S.filtersTitle)("Filters"),
       <.div(S.partitionChooser)(
         checkboxToggle("Train", filter.zoom(Filters.train)),
         checkboxToggle("Dev",   filter.zoom(Filters.dev)),
-        // checkboxToggle("Test",  filter.zoom(Filters.test))
+        checkboxToggle("Test",  filter.zoom(Filters.test))(^.visibility := "hidden")
       ),
       <.div(S.domainChooser)(
         checkboxToggle("Wikipedia", filter.zoom(Filters.wikipedia)),
@@ -177,21 +190,99 @@ object Browser {
     )
   }
 
+  def getCurSentences(
+    allSentences: SortedSet[Sentence],
+    query: Set[LowerCaseString],
+    denseIds: Set[SentenceId],
+    denseOnly: Boolean
+  ) = {
+    val searchFilteredSentences = if(query.isEmpty) {
+      allSentences
+    } else {
+      allSentences.filter { sent =>
+        val sentTokenSet = sent.sentenceTokens
+          .flatMap(t => List(t, Text.normalizeToken(t)))
+          .map(_.lowerCase)
+          .toSet
+        sentTokenSet.intersect(query).nonEmpty
+      }
+    }
+    val denseFilteredSentences = if(!denseOnly) {
+      allSentences
+    } else {
+      allSentences.filter(s => denseIds.contains(SentenceId.fromString(s.sentenceId)))
+    }
+    searchFilteredSentences.intersect(denseFilteredSentences)
+  }
+
+  def qaLabelRow(label: QuestionLabel) = {
+    <.tr(S.qaPairRow)(
+      ^.key := label.questionString,
+      <.td(S.questionCell)(
+        <.span(S.questionText)(
+          label.questionString
+        )
+      ),
+      <.td(S.answerCell)(
+        <.span(S.answerText)(
+          "TODO answers"
+        )
+      )
+    )
+  }
+
+  def verbEntryDisplay(
+    verb: VerbEntry,
+    curSentence: Sentence
+  ) = {
+    <.div(S.verbEntryDisplay)(
+      ^.key := verb.verbIndex,
+      <.div(S.verbHeading)(
+        <.span(S.verbHeadingText)(
+          curSentence.sentenceTokens(verb.verbIndex)
+        )
+      ),
+      <.table(S.verbQAsTable)(
+        <.tbody(S.verbQAsTableBody)(
+          verb.questionLabels.toList.map(_._2).sortBy(_.questionString).toVdomArray { label =>
+            qaLabelRow(label)
+          }
+        )
+      )
+    )
+  }
+
+  def sentenceDisplayPane(
+    curSentence: Sentence
+  ) = {
+      DivReference.make(
+        <.div(S.sentenceTextContainer)(
+          <.span(S.sentenceText)(
+            Text.render(curSentence.sentenceTokens)
+          )
+        )
+      ) { case (sentBox, sentBoxRefOpt) =>
+          <.div(S.sentenceDisplayPane)(
+            sentBox,
+            sentBoxRefOpt.fold(<.div(S.loadingNotice)("AAAAHH")) { sentenceBoxRef =>
+              val rect = sentenceBoxRef.getBoundingClientRect
+              println(rect)
+              val height = math.round(rect.height)
+              println(height)
+              <.div(S.verbEntriesContainer)(
+                ^.paddingTop := s"${height}px",
+                curSentence.verbEntries.values.toList.sortBy(_.verbIndex).toVdomArray { verb =>
+                  verbEntryDisplay(verb, curSentence)
+                }
+              )
+            }
+          )
+      }
+  }
+
   val S = BrowserStyles
 
   class Backend(scope: BackendScope[Props, State]) {
-
-    def documentText(props: Props, doc: Document, setSentence: Sentence => Callback) = {
-      <.p(
-        doc.sentences.toVdomArray { sentence =>
-          <.span(
-            ^.key := sentence.sentenceId,
-            ^.onClick --> setSentence(sentence),
-            " " + Text.render(sentence.sentenceTokens) + " "
-          )
-        }
-      )
-    }
 
     def docSelectionPane(
       totalNumDocs: Int,
@@ -221,17 +312,24 @@ object Browser {
     }
 
     def sentenceSelectionPane(
-      document: Document,
-      curSentence: StateVal[Sentence],
+      numSentencesInDocument: Int,
+      curSentences: SortedSet[Sentence],
+      searchQuery: Set[LowerCaseString],
+      curSentence: StateVal[Sentence]
     ) = {
+      val sentenceCountLabel = if(curSentences.size == numSentencesInDocument) {
+        s"$numSentencesInDocument sentences"
+      } else {
+        s"${curSentences.size} / $numSentencesInDocument sentences"
+      }
       <.div(S.scrollPane)(
         <.div(S.sentenceCountLabel)(
           <.span(S.sentenceCountLabelText)(
-            s"${document.sentences.size} sentences"
+            sentenceCountLabel
           )
         ),
         <.div(S.sentenceSelectionPane)(
-          document.sentences.toVdomArray { sentence =>
+          curSentences.toVdomArray { sentence =>
             <.div(S.sentenceSelectionEntry)(
               ^.key := sentence.sentenceId,
               if(sentence == curSentence.get) S.currentSelectionEntry else S.nonCurrentSelectionEntry,
@@ -245,54 +343,6 @@ object Browser {
       )
     }
 
-    def verbEntryDisplay(
-      verb: VerbEntry,
-      curSentence: Sentence
-    ) = {
-      <.div(S.verbEntryDisplay)(
-        ^.key := verb.verbIndex,
-        <.div(S.verbHeading)(
-          <.span(S.verbHeadingText)(
-            curSentence.sentenceTokens(verb.verbIndex)
-          )
-        ),
-        <.table(S.verbQAsTable)(
-          <.tbody(S.verbQAsTableBody)(
-            verb.questionLabels.toList.map(_._2).sortBy(_.questionString).toVdomArray { label =>
-              qaLabelRow(label)
-            }
-          )
-        )
-      )
-    }
-
-    def qaLabelRow(label: QuestionLabel) = {
-      <.tr(S.qaPairRow)(
-        ^.key := label.questionString,
-        <.td(S.questionCell)(
-          <.span(S.questionText)(
-            label.questionString
-          )
-        ),
-        <.td(S.answerCell)(
-          <.span(S.answerText)(
-            "TODO answers"
-          )
-        )
-      )
-    }
-
-    def sentenceDisplayPane(curSentence: Sentence) = {
-      <.div(S.sentenceDisplayPane)(
-        <.span(S.sentenceText)(
-          Text.render(curSentence.sentenceTokens)
-        ),
-        curSentence.verbEntries.values.toList.sortBy(_.verbIndex).toVdomArray { verb =>
-          verbEntryDisplay(verb, curSentence)
-        }
-      )
-    }
-
     def render(props: Props, state: State) = {
       val stateVal = makeStateValForState(scope, state)
       <.div(S.mainContainer)(
@@ -303,26 +353,38 @@ object Browser {
               <.span(S.loadingNotice)("Loading metadata...")
             )
           case IndexFetch.Loaded(index) =>
-            val curDocMetas = curDocuments(index, state.filter)
-            DocMetaLocal.make(
-              initialValue = curDocMetas.head,
-              shouldRefresh = _ => false
-            ) { curDocMeta =>
-              <.div(S.dataContainer)(
-                docSelectionPane(index.numDocuments, curDocMetas, curDocMeta),
-                DocFetch.make(request = curDocMeta.get.id, sendRequest = id => props.qasrl.getDocument(id)) {
-                  case DocFetch.Loading =>
-                    <.div(S.documentContainer)(
-                      <.span(S.loadingNotice)("Loading document...")
-                    )
-                  case DocFetch.Loaded(doc) => SentLocal.make(initialValue = doc.sentences.head) { curSentence =>
-                    <.div(S.documentContainer)(
-                      sentenceSelectionPane(doc, curSentence),
-                      sentenceDisplayPane(curSentence.get)
-                    )
-                  }
+            SearchFetch.make(request = state.search.query, sendRequest = props.qasrl.searchDocuments _) {
+              case SearchFetch.Loading =>
+                <.span(S.loadingNotice)("Waiting for search results...")
+              case SearchFetch.Loaded(searchResultIds) =>
+                val denseDocIds = index.denseIds.map(_.documentId)
+                val curDocMetas = getCurDocuments(index, searchResultIds, state.filter, denseDocIds)
+                if(curDocMetas.isEmpty) {
+                  <.span(S.loadingNotice)("All documents have been filtered out.")
+                } else DocMetaLocal.make(
+                  initialValue = curDocMetas.head,
+                  shouldRefresh = _ => false
+                ) { curDocMeta =>
+                  <.div(S.dataContainer)(
+                    docSelectionPane(index.numDocuments, curDocMetas, curDocMeta),
+                    DocFetch.make(request = curDocMeta.get.id, sendRequest = id => props.qasrl.getDocument(id)) {
+                      case DocFetch.Loading =>
+                        <.div(S.documentContainer)(
+                          <.span(S.loadingNotice)("Loading document...")
+                        )
+                      case DocFetch.Loaded(doc) =>
+                        val curSentences = getCurSentences(doc.sentences, state.search.query, index.denseIds, state.filter.denseOnly)
+                        if(curSentences.isEmpty) {
+                          <.span(S.loadingNotice)("All sentences have been filtered out.")
+                        } else SentLocal.make(initialValue = curSentences.head) { curSentence =>
+                          <.div(S.documentContainer)(
+                            sentenceSelectionPane(doc.sentences.size, curSentences, state.search.query, curSentence),
+                            sentenceDisplayPane(curSentence.get)
+                          )
+                        }
+                    }
+                  )
                 }
-              )
             }
         }
       )
