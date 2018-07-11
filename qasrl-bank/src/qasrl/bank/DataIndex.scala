@@ -8,4 +8,5 @@ case class DataIndex(
 ) {
   lazy val allDocuments = documents.values.reduce(_ union _)
   def numDocuments = allDocuments.size
+  def getPart(id: DocumentId): DatasetPartition = documents.find(_._2.exists(_.id == id)).get._1
 }

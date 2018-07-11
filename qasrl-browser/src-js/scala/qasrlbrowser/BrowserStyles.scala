@@ -109,8 +109,23 @@ object BrowserStyles extends StyleSheet.Inline {
 
   // selection of sentences
 
-  val countLabelHeight = 1 rem
-  val countLabelFontSize = 8 pt
+  val metadataLabelHeight = 1 rem
+  val metadataLabelFontSize = 8 pt
+
+  val metadataLabel = style(
+    height(metadataLabelHeight),
+    backgroundColor.white,
+    fontSize(metadataLabelFontSize),
+    verticalAlign.middle
+  )
+  val metadataLabelText = style(
+    addClassNames("px-1"),
+    whiteSpace.nowrap
+  )
+  val fixedPaneHeader = style(
+    position.fixed,
+    top(headerHeight)
+  )
 
   val documentSelectionPaneWidth = 10 rem
   val sentenceSelectionPaneWidth = 12 rem
@@ -120,21 +135,17 @@ object BrowserStyles extends StyleSheet.Inline {
 
   val selectionPane = style(
     scrollPane,
-    paddingTop(countLabelHeight),
+    paddingTop(metadataLabelHeight),
     lineHeight(1.2)
   )
 
   val countLabel = style(
-    position.fixed,
-    top(headerHeight),
-    height(countLabelHeight),
-    backgroundColor.white,
-    fontSize(countLabelFontSize),
-    textAlign.right,
-    verticalAlign.middle
+    metadataLabel,
+    fixedPaneHeader,
+    textAlign.right
   )
   val countLabelText = style(
-    addClassNames("px-1")
+    metadataLabelText
   )
 
   val selectionEntry = style(
@@ -214,14 +225,25 @@ object BrowserStyles extends StyleSheet.Inline {
   val sentenceDisplayPane = style(
     fontSize(12 pt),
     scrollPane,
-    addClassNames("p-3"),
+    addClassNames("px-3"),
     flex := "1"
   )
 
-  val sentenceTextContainer = style(
-    position.fixed,
-    top(headerHeight),
+  val sentenceBox = style(
+    fixedPaneHeader,
     backgroundColor.white
+  )
+
+  val sentenceInfoContainer = style(
+    metadataLabel,
+    textAlign.left
+  )
+  val sentenceInfoText = style(
+    metadataLabelText
+  )
+
+  val sentenceTextContainer = style(
+    addClassNames("pb-3"),
   )
 
   val verbEntriesContainer = style()
@@ -235,25 +257,47 @@ object BrowserStyles extends StyleSheet.Inline {
   )
 
   val verbEntryDisplay = style(
-    addClassNames("p-1")
+    addClassNames("p-2"),
+    width(100 %%)
   )
 
   val verbHeading = style()
   val verbHeadingText = style(
+    fontSize(16 pt),
     fontWeight.bold
   )
-  val verbQAsTable = style()
-  val verbQAsTableBody = style()
+  val verbQAsTable = style(
+    width(100 %%)
+  )
+  val verbQAsTableBody = style(
+    width(100 %%)
+  )
   val qaPairRow = style(
     addClassNames("p-1"),
+    width(100 %%),
     &.nthChild("even")(
       backgroundColor(grey(240))
     )
   )
   val questionCell = style(
-    width(25 rem)
+    width(12 rem)
   )
   val questionText = style()
+
+  val validityCell = style(
+    addClassNames("px-2"),
+    width(2 rem)
+  )
+  val validityText = style()
+  val validValidityText = style(
+    validityText,
+    color.green
+  )
+  val invalidValidityText = style(
+    validityText,
+    color.red
+  )
+
   val answerCell = style()
   val answerText = style()
 
