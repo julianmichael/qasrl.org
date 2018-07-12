@@ -237,7 +237,7 @@ object Browser {
           <.div(S.helpModalHeader)(
             <.span(S.helpModalTitle)(
               ^.id := helpModalLabelId,
-              "Full legend"
+              "QA-SRL Bank 2.0 Browser"
             ),
             <.button(S.helpModalHeaderCloseButton)(
               ^.`type` := "button", dataDismiss := "modal", ariaLabel := "Close",
@@ -245,7 +245,112 @@ object Browser {
             )
           ),
           <.div(S.helpModalBody)(
-            "Full legend description is under construction."
+            <.p(
+              "This page presents the complete dataset collected in the paper ",
+              <.a(^.href := "#", "Large-Scale QA-SRL Parsing"),
+              ", by Nicholas FitzGerald, Julian Michael, Luheng He, and Luke Zettlemoyer, ",
+              "presented at ACL 2018. ",
+              "We crowdsourced a large (>64,000 sentence) dataset in several stages. ",
+              "In this data browser you can explore how the data looked at each stage and in each domain. ",
+              "A full description of the interface is given below. "
+            ),
+            <.p( // TODO use proper bootstrap type for this
+              <.b("Warning: "), "This interface will be messed up on mobile or if your window is too narrow. ",
+              "If the interface seems laid out wrong, try zooming out in your browser (e.g., cmd+minus on Chrome on Mac) ",
+              "or widening your browser window. "
+            ),
+            <.h3("About the Data"),
+            <.p(
+              "QA-SRL reframes the traditional problem of Semantic Role Labeling into one of writing questions and answers. ",
+              "The questions are taken from a restrictive template centered around the verb being targeted as the predicate, ",
+              "and answers are contiguous spans of tokens from the sentence. ",
+              "In our annotation setup, we had at least 3 annotators answer each question as part of quality control. ",
+              "Annotators could also mark questions as invalid. "
+            ),
+            <.p(
+              "We annotated data across 3 domains: ",
+              <.ul(
+                <.li(
+                  <.a(^.href := "https://en.wikipedia.org", "Wikipedia"), ", "
+                ),
+                <.li(
+                  <.a(^.href := "https://en.wikinews.org",  "Wikinews"),  ", and " // TODO check link
+                ),
+                <.li(
+                  " science textboooks (from the ",
+                  <.a(^.href := "#",  "Textbook Question Answering"),  " dataset)." // TODO link
+                )
+              ),
+              "The data was also annotated in three stages: ",
+              <.ul(
+                <.li(
+                  <.b("Original"), ": workers on Mechanical Turk wrote and answered questions for each verb,"
+                ),
+                <.li(
+                  <.b("Expansion"), ": a model trained on the original data produced questions, which turkers answered, and"
+                ),
+                <.li(
+                  <.b("Eval"), ": for a small subset of dev and test, we overgenerated questions from our baseline models ",
+                  "and had annotators answer them at twice the original density (from 3 to 6 answer judgments per question)."
+                )
+              ),
+              "Since workers could mark questions as invalid, our convention is to count a question as valid if at least ",
+              "5/6 of its questions are valid — so all 3, in the case of 3 answers, or 5 out of 6 in the case of 6."
+            ),
+            <.h3("Filters"),
+            <.ul(
+              <.li(
+                <.b("Train / Dev: "),
+                "Toggle display of documents in the train and dev partitions."
+              ),
+              <.li(
+                <.b("Wikipedia / Wikinews / TQA: "),
+                "Toggle display of documents in the each of the three domains."
+              ),
+              <.li(
+                <.b("Original / Expansion / Eval: "),
+                "Toggle the display of data based on what round it was written in. ",
+                "The eval filter will include all questions and answers (including from the other two rounds) ",
+                "that were written for the sentences passed through the evaluation stage, whereas ",
+                "for questions introduced in the original and expansion stages, only answers from those stages will be included, ",
+                "even if those questions were also passed through the eval stage."
+              ),
+              <.li(
+                <.b("Valid only: "),
+                "Filter out questions that would be counted invalid by our heuristic, based on the set of answers included ",
+                "according to the current filters. ",
+              ),
+              "See ",
+              <.a(^.href := "#", "the paper "),
+              "for more details. "
+            ),
+            <.h3("Keyword Search"),
+            <.p(
+              "You may search the dataset for specific words by typing a query in the Keyword Search field and pressing enter. ",
+              "The interface will then show only documents and sentences containing that word. ",
+              "This does not search through document titles (use cmd+F or ctrl+F for that), ",
+              "is case-insensitive, and matches verbs that are inflected differently. "
+            ),
+            <.h3("Data Display"),
+            <.p(
+              "When a sentence is selected, all answer spans admitted by the current filters ",
+              "will be highlighted in that sentence in the main display. ",
+              "Spans are highlighted with low opacity, so stronger colors ",
+              "indicate more than one worker highlighting a span or word. ",
+              "Spans are color-coded according to the verb whose question they were used to answer. ",
+              "Hovering the mouse over a verb or its entry in the data table will restrict the highlighted spans to ",
+              "answers of questions written for that verb. "
+            ),
+            <.p(
+              "Questions are also color-coded with a vertical line on their left, ",
+              "based on the annotation round in which they were first introduced: ",
+              <.div(S.originalLegendMark)("m"),
+              <.span(" Original, "),
+              <.div(S.expansionLegendMark)("m"),
+              <.span(" Expansion, and "),
+              <.div(S.evalLegendMark)("m"),
+              <.span(" Eval.")
+            )
           ),
           <.div(S.helpModalFooter)(
             <.button(S.helpModalFooterCloseButton)(
@@ -628,7 +733,13 @@ object Browser {
                   case (verbIndex, color) if highlightedVerbIndex.get.forall(_ == verbIndex) =>
                     verbIndex -> TagMod(
                       ^.color := color.copy(a = 1.0).toColorStyleString,
-                      ^.fontWeight := "bold"
+                      ^.fontWeight := "bold",
+                      ^.onMouseMove --> (
+                        if(highlightedVerbIndex.get == Some(verbIndex)) {
+                          Callback.empty
+                        } else highlightedVerbIndex.set(Some(verbIndex))
+                      ),
+                      ^.onMouseOut --> highlightedVerbIndex.set(None)
                     )
                 }
               )
@@ -646,7 +757,11 @@ object Browser {
                   sentence.verbEntries.values.toList.sortBy(_.verbIndex).toVdomArray { verb =>
                     verbEntryDisplay(sentence, verb, slices, validOnly, verbColorMap(verb.verbIndex))(
                       ^.key := verb.verbIndex,
-                      ^.onMouseMove --> highlightedVerbIndex.set(Some(verb.verbIndex)),
+                      ^.onMouseMove --> (
+                        if(highlightedVerbIndex.get == Some(verb.verbIndex)) {
+                          Callback.empty
+                        } else highlightedVerbIndex.set(Some(verb.verbIndex))
+                      ),
                       ^.onMouseOut --> highlightedVerbIndex.set(None)
                     )
                   }

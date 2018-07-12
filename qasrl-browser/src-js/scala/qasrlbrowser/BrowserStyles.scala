@@ -103,7 +103,8 @@ object BrowserStyles extends StyleSheet.Inline {
     addClassNames("modal", "fade")
   )
   val helpModalDialog = style(
-    addClassNames("modal-dialog")
+    addClassNames("modal-dialog"),
+    maxWidth(800 px)
   )
   val helpModalContent = style(
     addClassNames("modal-content")
