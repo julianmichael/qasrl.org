@@ -60,6 +60,7 @@ object Browser {
   val SentLocal = new LocalStateComponent[Sentence]
   val DivReference = new ReferenceComponent[html.Div]
   val BoolLocal = new LocalStateComponent[Boolean]
+  val OptIntLocal = new LocalStateComponent[Option[Int]]
 
   case class Props(
     qasrl: DocumentService[CacheCall]
@@ -91,7 +92,7 @@ object Browser {
   object Filters {
     def initial = Filters(
       Set(DatasetPartition.Dev),
-      Set(Domain.Wikipedia),
+      Set(Domain.TQA),
       Slices.initial,
       false
     )
@@ -142,16 +143,15 @@ object Browser {
   ) = StateVal[S](state, s => scope.setState(s))
 
   val transparent = Rgba(255, 255, 255, 0.0)
-  val answerHighlightLayer = Rgba(255, 255, 0, 0.2)
   val queryKeywordHighlightLayer = Rgba(255, 255, 0, 0.4)
 
   val highlightLayerColors = List(
-    Rgba(255, 255,   0, 0.2), // yellow
-    Rgba(  0, 128, 255, 0.2), // green-blue
-    Rgba(255,   0, 128, 0.2), // magenta?
-    Rgba(128, 255,   0, 0.2), // something. idk
-    Rgba(128,   0, 255, 0.2), //
-    Rgba(  0, 255, 128, 0.2)  //
+    // Rgba(255, 255,   0, 0.2), // yellow
+    Rgba(  0, 128, 255, 0.1), // green-blue
+    Rgba(255,   0, 128, 0.1), // magenta?
+    Rgba( 64, 192,   0, 0.1), // something. idk
+    Rgba(128,   0, 255, 0.1), // mystery
+    Rgba(  0, 255, 128, 0.1)  // blue-green
   )
 
   def checkboxToggle[A](
@@ -292,7 +292,7 @@ object Browser {
         (1 to 6).flatMap { i =>
           val colorStr = NonEmptyList(
             transparent,
-            List.fill(i)(answerHighlightLayer)
+            List.fill(i)(highlightLayerColors.head)
           ).reduce((x: Rgba, y: Rgba) => x add y).toColorStyleString
           List(
             <.span(^.key := s"slashafterlegend-$i", "/"),
@@ -383,7 +383,8 @@ object Browser {
 
   def renderSentenceWithHighlights(
     sentenceTokens: Vector[String],
-    coloringSpec: SpanColoringSpec
+    coloringSpec: SpanColoringSpec,
+    wordAttributes: Map[Int, TagMod] = Map()
   ) = {
     val containingSpan = coloringSpec match {
       case RenderWholeSentence(_) =>
@@ -425,6 +426,7 @@ object Browser {
             .reduce((x: Rgba, y: Rgba) => x add y).toColorStyleString
           List(
             <.span(
+              wordAttributes.get(index).whenDefined,
               ^.key := s"word-$index",
               ^.style := js.Dynamic.literal("backgroundColor" -> colorStr),
               Text.normalizeToken(sentenceTokens(index))
@@ -437,7 +439,8 @@ object Browser {
 
   def makeAllHighlightedAnswer(
     sentenceTokens: Vector[String],
-    answers: NonEmptyList[Answer]
+    answers: NonEmptyList[Answer],
+    color: Rgba
   ): VdomArray = {
     val orderedSpans = answers.flatMap(a => NonEmptyList.fromList(a.spans.toList).get).sorted
     case class GroupingState(
@@ -456,7 +459,7 @@ object Browser {
     val answerHighlighties = contigSpanLists.reverse.map(spanList =>
       List(
         <.span(
-          renderSentenceWithHighlights(sentenceTokens, RenderRelevantPortion(spanList.map(_ -> answerHighlightLayer)))
+          renderSentenceWithHighlights(sentenceTokens, RenderRelevantPortion(spanList.map(_ -> color)))
         )
       )
     ).intercalate(List(<.span(" / ")))
@@ -492,7 +495,8 @@ object Browser {
   def qaLabelRow(
     sentence: Sentence,
     label: QuestionLabel,
-    slices: Slices
+    slices: Slices,
+    color: Rgba
   ) = {
     val answerJudgments = label.answerJudgments.filter { aj =>
       shouldAnswerBeIncluded(AnswerSource.fromString(aj.sourceId), slices)
@@ -528,7 +532,7 @@ object Browser {
               case AnswerLabel(sourceId, Answer(spans)) => Answer(spans)
             }
           ).whenDefined { answersNel =>
-            makeAllHighlightedAnswer(sentence.sentenceTokens, answersNel)
+            makeAllHighlightedAnswer(sentence.sentenceTokens, answersNel, color)
           }
         }
       )
@@ -557,11 +561,13 @@ object Browser {
     curSentence: Sentence,
     verb: VerbEntry,
     slices: Slices,
-    validOnly: Boolean
+    validOnly: Boolean,
+    color: Rgba
   ) = {
     <.div(S.verbEntryDisplay)(
       <.div(S.verbHeading)(
         <.span(S.verbHeadingText)(
+          ^.color := color.copy(a = 1.0).toColorStyleString,
           curSentence.sentenceTokens(verb.verbIndex)
         )
       ),
@@ -571,10 +577,10 @@ object Browser {
             .filter(l => shouldQuestionBeShown(l, slices, validOnly))
             .sorted
           if(questionLabels.isEmpty) {
-            <.span(S.loadingNotice)("All questions have been filtered out.")
+            <.tr(<.td(<.span((S.loadingNotice)("All questions have been filtered out."))))
           } else questionLabels
             .toVdomArray { label =>
-            qaLabelRow(curSentence, label, slices)(^.key := label.questionString)
+            qaLabelRow(curSentence, label, slices, color)(^.key := label.questionString)
           }
         }
       )
@@ -589,44 +595,65 @@ object Browser {
     validOnly: Boolean
   ) = {
     val sentenceId = SentenceId.fromString(sentence.sentenceId)
-    // TODO color differently depending on verb; add verb colors
-    val answerSpansWithColors = for {
-      verb <- sentence.verbEntries.values.toList
-      question <- verb.questionLabels.values.toList
-      if shouldQuestionBeShown(question, slices, validOnly)
-      answerLabel <- question.answerJudgments
-      if shouldAnswerBeIncluded(AnswerSource.fromString(answerLabel.sourceId), slices)
-      Answer(spans) <- answerLabel.judgment.getAnswer.toList
-      span <- spans.toList
-    } yield span -> answerHighlightLayer
-    DivReference.make(
-      <.div(S.sentenceBox)(
-        <.div(S.sentenceInfoContainer)(
-          <.span(S.sentenceInfoText) {
-            val abbrevTitle = if(docMeta.title.length <= 30) docMeta.title else docMeta.title.take(27) + "..."
-            s"$part / ${docMeta.id.domain} / ${docMeta.id.id} ($abbrevTitle) / paragraph ${sentenceId.paragraphNum}, sentence ${sentenceId.sentenceNum}"
-          }
-        ),
-        <.div(S.sentenceTextContainer)(
-          <.span(S.sentenceText)(
-            renderSentenceWithHighlights(sentence.sentenceTokens, RenderWholeSentence(answerSpansWithColors))
-          )
-        )
-      )
-    ) { case (sentBox, sentBoxRefOpt) =>
-        <.div(S.sentenceDisplayPane)(
-          sentBox,
-          sentBoxRefOpt.fold(<.div()) { sentenceBoxRef =>
-            val rect = sentenceBoxRef.getBoundingClientRect
-            val height = math.round(rect.height)
-              <.div(S.verbEntriesContainer)(
-                ^.paddingTop := s"${height}px",
-                sentence.verbEntries.values.toList.sortBy(_.verbIndex).toVdomArray { verb =>
-                  verbEntryDisplay(sentence, verb, slices, validOnly)(^.key := verb.verbIndex)
+    val sortedVerbs = sentence.verbEntries.toList.sortBy(_._1).map(_._2)
+    OptIntLocal.make(initialValue = None) { highlightedVerbIndex =>
+      val answerSpansWithColors = for {
+        (verb, index) <- sortedVerbs.zipWithIndex
+        if highlightedVerbIndex.get.forall(_ == verb.verbIndex)
+        question <- verb.questionLabels.values.toList
+        if shouldQuestionBeShown(question, slices, validOnly)
+        answerLabel <- question.answerJudgments
+        if shouldAnswerBeIncluded(AnswerSource.fromString(answerLabel.sourceId), slices)
+        Answer(spans) <- answerLabel.judgment.getAnswer.toList
+        span <- spans.toList
+      } yield span -> highlightLayerColors(index % highlightLayerColors.size)
+      val verbColorMap = sortedVerbs
+        .zipWithIndex.map { case (verb, index) =>
+          verb.verbIndex -> highlightLayerColors(index % highlightLayerColors.size)
+      }.toMap
+      DivReference.make(
+        <.div(S.sentenceBox)(
+          <.div(S.sentenceInfoContainer)(
+            <.span(S.sentenceInfoText) {
+              val abbrevTitle = if(docMeta.title.length <= 30) docMeta.title else docMeta.title.take(27) + "..."
+              s"$part / ${docMeta.id.domain} / ${docMeta.id.id} ($abbrevTitle) / paragraph ${sentenceId.paragraphNum}, sentence ${sentenceId.sentenceNum}"
+            }
+          ),
+          <.div(S.sentenceTextContainer)(
+            <.span(S.sentenceText)(
+              renderSentenceWithHighlights(
+                sentence.sentenceTokens,
+                RenderWholeSentence(answerSpansWithColors),
+                verbColorMap.collect {
+                  case (verbIndex, color) if highlightedVerbIndex.get.forall(_ == verbIndex) =>
+                    verbIndex -> TagMod(
+                      ^.color := color.copy(a = 1.0).toColorStyleString,
+                      ^.fontWeight := "bold"
+                    )
                 }
               )
-          }
+            )
+          )
         )
+      ) { case (sentBox, sentBoxRefOpt) =>
+          <.div(S.sentenceDisplayPane)(
+            sentBox,
+            sentBoxRefOpt.fold(<.div()) { sentenceBoxRef =>
+              val rect = sentenceBoxRef.getBoundingClientRect
+              val height = math.round(rect.height)
+                <.div(S.verbEntriesContainer)(
+                  ^.paddingTop := s"${height}px",
+                  sentence.verbEntries.values.toList.sortBy(_.verbIndex).toVdomArray { verb =>
+                    verbEntryDisplay(sentence, verb, slices, validOnly, verbColorMap(verb.verbIndex))(
+                      ^.key := verb.verbIndex,
+                      ^.onMouseMove --> highlightedVerbIndex.set(Some(verb.verbIndex)),
+                      ^.onMouseOut --> highlightedVerbIndex.set(None)
+                    )
+                  }
+                )
+            }
+          )
+      }
     }
   }
 
@@ -636,10 +663,11 @@ object Browser {
     searchQuery: Set[LowerCaseString],
     curSentence: StateVal[Sentence]
   ) = {
+    val sentencesWord = if(numSentencesInDocument == 1) "sentence" else "sentences"
     val sentenceCountLabel = if(curSentences.size == numSentencesInDocument) {
-      s"$numSentencesInDocument sentences"
+      s"$numSentencesInDocument $sentencesWord"
     } else {
-      s"${curSentences.size} / $numSentencesInDocument sentences"
+      s"${curSentences.size} / $numSentencesInDocument $sentencesWord"
     }
 
     <.div(S.scrollPane)(

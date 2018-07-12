@@ -38,9 +38,10 @@ object WebServerMain extends StreamApp[IO] {
         sent <- doc.sentences.iterator
         tokIndex <- sent.sentenceTokens.indices.iterator
         tok <- (
-          List(initTok, Text.normalizeToken(initTok)) ++ sent.verbEntries.get(tokIndex).fold(Nil)(verb =>
-            verb.verbInflectedForms.allForms.map(_.toString)
-          )
+          List(sent.sentenceTokens(tokIndex), Text.normalizeToken(sent.sentenceTokens(tokIndex))) ++
+            sent.verbEntries.get(tokIndex).fold(List.empty[String])(verb =>
+              verb.verbInflectedForms.allForms.map(_.toString)
+            )
         ).iterator
       } yield tok.lowerCase -> doc.metadata.id
 

@@ -336,7 +336,7 @@ object BrowserStyles extends StyleSheet.Inline {
   )
   val expansionRoundIndicator = style(
     roundIndicator,
-    backgroundColor.blue
+    backgroundColor(rgba(  64, 192,   0, 1.0))
   )
   val evalRoundIndicator = style(
     roundIndicator,
