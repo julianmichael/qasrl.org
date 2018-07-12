@@ -36,8 +36,12 @@ object WebServerMain extends StreamApp[IO] {
       def tokenDocPairs = for {
         doc <- docs.values.iterator
         sent <- doc.sentences.iterator
-        initTok <- sent.sentenceTokens.iterator
-        tok <- List(initTok, Text.normalizeToken(initTok)).iterator
+        tokIndex <- sent.sentenceTokens.indices.iterator
+        tok <- (
+          List(initTok, Text.normalizeToken(initTok)) ++ sent.verbEntries.get(tokIndex).fold(Nil)(verb =>
+            verb.verbInflectedForms.allForms.map(_.toString)
+          )
+        ).iterator
       } yield tok.lowerCase -> doc.metadata.id
 
       tokenDocPairs.toList.groupBy(_._1).map { case (tok, pairs) =>

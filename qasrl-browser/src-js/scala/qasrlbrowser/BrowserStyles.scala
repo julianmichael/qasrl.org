@@ -76,7 +76,7 @@ object BrowserStyles extends StyleSheet.Inline {
     filterChooser
   )
 
-  val additionalFiltersChooser = style(
+  val sliceChooser = style(
     filterChooser
   )
 
@@ -85,10 +85,19 @@ object BrowserStyles extends StyleSheet.Inline {
   val legendContainer = style()
 
   val legendTitle = style()
+
   val legendTitleText = style(
     fontWeight.bold
   )
   val legendTitleLinkText = style()
+
+  val validityLegend = style()
+
+  val highlightLegend = style()
+
+  val legendColorIndicator = style()
+
+  // help modal
 
   val helpModal = style(
     addClassNames("modal", "fade")
@@ -119,12 +128,6 @@ object BrowserStyles extends StyleSheet.Inline {
   val helpModalFooterCloseButton = style(
     addClassNames("btn", "btn-secondary")
   )
-
-  val validityLegend = style()
-
-  val highlightLegend = style()
-  val legendColorIndicator = style()
-
 
   // main data display
 
@@ -322,7 +325,51 @@ object BrowserStyles extends StyleSheet.Inline {
       backgroundColor(grey(240))
     )
   )
+
+  val roundIndicator = style(
+    width(0.2 rem),
+    height(100 %%)
+  )
+  val originalRoundIndicator = style(
+    roundIndicator,
+    backgroundColor(grey(220))
+  )
+  val expansionRoundIndicator = style(
+    roundIndicator,
+    backgroundColor.blue
+  )
+  val evalRoundIndicator = style(
+    roundIndicator,
+    backgroundColor.orange
+  )
+
+  // detour to legend real quick
+
+  val roundLegendMark = style(
+    addClassNames("ml-2"),
+    display.inlineBlock,
+    color.transparent
+  )
+
+  val originalLegendMark = style(
+    roundLegendMark,
+    originalRoundIndicator
+  )
+
+  val expansionLegendMark = style(
+    roundLegendMark,
+    expansionRoundIndicator
+  )
+
+  val evalLegendMark = style(
+    roundLegendMark,
+    evalRoundIndicator
+  )
+
+  // back to table (question cells etc)
+
   val questionCell = style(
+    addClassNames("pl-1"),
     width(12 rem)
   )
   val questionText = style()

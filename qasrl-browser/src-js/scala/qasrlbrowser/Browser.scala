@@ -73,19 +73,26 @@ object Browser {
     def initial = Search("", Set.empty[LowerCaseString])
   }
 
+  @Lenses case class Slices(
+    original: Boolean,
+    expansion: Boolean,
+    eval: Boolean
+  )
+  object Slices {
+    val initial = Slices(true, true, true)
+  }
+
   @Lenses case class Filters(
     partitions: Set[DatasetPartition],
     domains: Set[Domain],
-    origOnly: Boolean,
-    denseOnly: Boolean,
+    slices: Slices,
     validOnly: Boolean
   )
   object Filters {
     def initial = Filters(
       Set(DatasetPartition.Dev),
       Set(Domain.Wikipedia),
-      false,
-      false,
+      Slices.initial,
       false
     )
   }
@@ -101,11 +108,6 @@ object Browser {
     def tqa       = fs.domains composeLens atDomain(Domain.TQA)
   }
 
-  def isQuestionValid(label: QuestionLabel): Boolean = {
-    val numValidJudgments = label.answerJudgments.count(_.judgment.isAnswer)
-    numValidJudgments.toDouble / label.answerJudgments.size > (4.99 / 6.0)
-  }
-
   def getCurDocuments(
     index: DataIndex,
     searchedIds: Set[DocumentId],
@@ -117,9 +119,9 @@ object Browser {
         .filter(doc =>
         filter.domains.contains(doc.id.domain) &&
           searchedIds.contains(doc.id) &&
-          (!filter.denseOnly || denseIds.contains(doc.id))
+          (filter.slices.original || filter.slices.expansion || (filter.slices.eval && denseIds.contains(doc.id)))
       )
-    ).reduce(_ union _)
+    ).foldLeft(SortedSet.empty[DocumentMetadata])(_ union _)
   }
 
   @Lenses case class State(
@@ -140,7 +142,17 @@ object Browser {
   ) = StateVal[S](state, s => scope.setState(s))
 
   val transparent = Rgba(255, 255, 255, 0.0)
-  val highlightyYellow = Rgba(255, 255, 0, 0.2)
+  val answerHighlightLayer = Rgba(255, 255, 0, 0.2)
+  val queryKeywordHighlightLayer = Rgba(255, 255, 0, 0.4)
+
+  val highlightLayerColors = List(
+    Rgba(255, 255,   0, 0.2), // yellow
+    Rgba(  0, 128, 255, 0.2), // green-blue
+    Rgba(255,   0, 128, 0.2), // magenta?
+    Rgba(128, 255,   0, 0.2), // something. idk
+    Rgba(128,   0, 255, 0.2), //
+    Rgba(  0, 255, 128, 0.2)  //
+  )
 
   def checkboxToggle[A](
     label: String,
@@ -186,6 +198,7 @@ object Browser {
   }
 
   def filterPane(filter: StateVal[Filters]) = {
+    val slices = filter.zoom(Filters.slices)
     <.div(S.filterContainer)(
       <.div(S.partitionChooser)(
         checkboxToggle("Train", filter.zoom(Filters.train)),
@@ -197,10 +210,10 @@ object Browser {
         checkboxToggle("Wikinews",  filter.zoom(Filters.wikinews)),
         checkboxToggle("TQA",       filter.zoom(Filters.tqa))
       ),
-      <.div(S.additionalFiltersChooser)(
-        checkboxToggle("Original only", filter.zoom(Filters.origOnly)),
-        checkboxToggle("Dense only", filter.zoom(Filters.denseOnly)),
-        checkboxToggle("Valid only", filter.zoom(Filters.validOnly))
+      <.div(S.sliceChooser)(
+        checkboxToggle("Original",  slices.zoom(Slices.original)),
+        checkboxToggle("Expansion", slices.zoom(Slices.expansion)),
+        checkboxToggle("Eval",      slices.zoom(Slices.eval))
       )
     )
   }
@@ -245,8 +258,7 @@ object Browser {
     )
   }
 
-
-  def legendPane = {
+  def legendPane(validOnly: StateVal[Boolean]) = {
     <.div(S.legendContainer)(
       <.div(S.legendTitle)(
         <.span(S.legendTitleText)("Legend "),
@@ -256,26 +268,41 @@ object Browser {
             dataToggle := "modal",
             dataTarget := s"#$helpModalId"
           )
-        )
+        ),
+        ": ",
+        <.div(S.originalLegendMark)("m"),
+        <.span(" Original "),
+        <.div(S.expansionLegendMark)("m"),
+        <.span(" Expansion "),
+        <.div(S.evalLegendMark)("m"),
+        <.span(" Eval")
       ),
       <.div(S.validityLegend)(
-        <.span(S.invalidValidityText)("4/6"),
-        <.span(" or fewer valid judgments = invalid, "),
-        <.span(S.validValidityText)("5/6"),
-        <.span(" or more = valid")
+        checkboxToggle("Valid only ", validOnly)(
+          ^.marginLeft := "20px", ^.display := "inline"
+        ),
+        <.span("("),
+        <.span(S.invalidValidityText)("≤ 4/6 ➔ invalid"),
+        <.span(", "),
+        <.span(S.validValidityText)("≥ 5/6 ➔ valid"),
+        <.span(")")
       ),
       <.div(S.highlightLegend)(
         <.span("Answer provided by "),
-        (1 to 6).toVdomArray { i =>
+        (1 to 6).flatMap { i =>
           val colorStr = NonEmptyList(
             transparent,
-            List.fill(i - 1)(highlightyYellow)
+            List.fill(i)(answerHighlightLayer)
           ).reduce((x: Rgba, y: Rgba) => x add y).toColorStyleString
-          <.span(S.legendColorIndicator)(
-            ^.style := js.Dynamic.literal("backgroundColor" -> colorStr),
-            f"$i%d"
+          List(
+            <.span(^.key := s"slashafterlegend-$i", "/"),
+            <.span(S.legendColorIndicator)(
+              ^.key := s"legendnum-$i",
+              ^.style := js.Dynamic.literal("backgroundColor" -> colorStr),
+              f"$i%d"
+            )
           )
-        },
+        }.tail.toVdomArray(x => x),
         <.span(" annotators")
       )
     )
@@ -288,7 +315,7 @@ object Browser {
         searchPane(state.zoom(State.search))
       ),
       filterPane(state.zoom(State.filter)),
-      legendPane
+      legendPane(state.zoom(State.filter).zoom(Filters.validOnly))
     )
   }
 
@@ -296,7 +323,7 @@ object Browser {
     allSentences: SortedSet[Sentence],
     query: Set[LowerCaseString],
     denseIds: Set[SentenceId],
-    denseOnly: Boolean
+    slices: Slices
   ) = {
     val searchFilteredSentences = if(query.isEmpty) {
       allSentences
@@ -309,12 +336,22 @@ object Browser {
         sentTokenSet.intersect(query).nonEmpty
       }
     }
-    val denseFilteredSentences = if(!denseOnly) {
-      allSentences
-    } else {
-      allSentences.filter(s => denseIds.contains(SentenceId.fromString(s.sentenceId)))
+    val sliceFilteredSentences = allSentences.filter { sent =>
+      slices.original || slices.expansion || (slices.eval && denseIds.contains(SentenceId.fromString(sent.sentenceId)))
     }
-    searchFilteredSentences.intersect(denseFilteredSentences)
+    searchFilteredSentences.intersect(sliceFilteredSentences)
+  }
+
+  def getRoundForQuestion(label: QuestionLabel) = {
+    val qSource = label.questionSources.map(s => QuestionSource.fromString(s): QuestionSource).min
+    qSource match {
+      case QuestionSource.Turker(_) => AnnotationRound.Original
+      case QuestionSource.Model(_)  =>
+        val hasAnswersInExpansion = label.answerJudgments.map(_.sourceId).exists(s =>
+          AnswerSource.fromString(s).round == AnnotationRound.Expansion
+        )
+        if(hasAnswersInExpansion) AnnotationRound.Expansion else AnnotationRound.Eval
+    }
   }
 
   import qasrl.bank.RichOrderObject
@@ -324,11 +361,8 @@ object Browser {
     Order.by[AnswerSpan, Int](_.begin),
     Order.by[AnswerSpan, Int](_.end)
   )
-  implicit val qasrlDataQuestionLabelOrder: Order[QuestionLabel] = Order.whenEqualMany(
-    // first annotation round where question appeared
-    Order.by[QuestionLabel, QuestionSource](_.questionSources.map(s => QuestionSource.fromString(s): QuestionSource).min),
-    // last annotation round where question was answered? maybe doesn't matter...
-    // Order.by[QuestionLabel, AnswerSource](_.answerJudgments.map(_.sourceId).maximumOpt.get),
+  implicit val qasrlDataQuestionLabelOrder: Order[QuestionLabel] = Order.whenEqual(
+    Order.by[QuestionLabel, AnnotationRound](getRoundForQuestion _),
     Order.by[QuestionLabel, String](_.questionString)
   )
 
@@ -339,28 +373,43 @@ object Browser {
     q >= s.begin && q < s.end
   }
 
-  def makeAnswerHighlighty(
+  sealed trait SpanColoringSpec {
+    def spansWithColors: List[(AnswerSpan, Rgba)]
+  }
+  case class RenderWholeSentence(val spansWithColors: List[(AnswerSpan, Rgba)]) extends SpanColoringSpec
+  case class RenderRelevantPortion(spansWithColorsNel: NonEmptyList[(AnswerSpan, Rgba)]) extends SpanColoringSpec {
+    def spansWithColors = spansWithColorsNel.toList
+  }
+
+  def renderSentenceWithHighlights(
     sentenceTokens: Vector[String],
-    contigSpans: NonEmptyList[AnswerSpan]
-  ): VdomArray = {
-    val begin = contigSpans.map(_.begin).minimum
-    val end = contigSpans.map(_.end).maximum
-    val containingSpan = AnswerSpan(begin, end)
-    val indexToNumContainingSpans = (begin until end).map { i =>
-      i -> contigSpans.filter(s => spanContains(s, i)).size
+    coloringSpec: SpanColoringSpec
+  ) = {
+    val containingSpan = coloringSpec match {
+      case RenderWholeSentence(_) =>
+        AnswerSpan(0, sentenceTokens.size)
+      case RenderRelevantPortion(swcNel) =>
+        val spans = swcNel.map(_._1)
+        AnswerSpan(spans.map(_.begin).minimum, spans.map(_.end).maximum)
+    }
+    val wordIndexToLayeredColors = (containingSpan.begin until containingSpan.end).map { i =>
+      i -> coloringSpec.spansWithColors.collect {
+        case (span, color) if spanContains(span, i) => color
+      }
+    }.toMap
+    val indexAfterToSpaceLayeredColors = ((containingSpan.begin + 1) to containingSpan.end).map { i =>
+      i -> coloringSpec.spansWithColors.collect {
+        case (span, color) if spanContains(span, i - 1) && spanContains(span, i) => color
+      }
     }.toMap
     Text.render[Int, List, List[VdomElement]](
       words = sentenceTokens.indices.toList,
       getToken = (index: Int) => sentenceTokens(index),
       spaceFromNextWord = (nextIndex: Int) => {
-        if(!spanContains(containingSpan, nextIndex) || nextIndex == begin) List() else {
-          val prevNum = indexToNumContainingSpans(nextIndex - 1)
-          val nextNum = indexToNumContainingSpans(nextIndex)
-          val minNum = math.min(prevNum, nextNum)
-          val colorStr = NonEmptyList[Rgba](
-            transparent,
-            List.fill(minNum - 1)(highlightyYellow)
-          ).reduce((x: Rgba, y: Rgba) => x add y).toColorStyleString
+        if(!spanContains(containingSpan, nextIndex) || nextIndex == containingSpan.begin) List() else {
+          val colors = indexAfterToSpaceLayeredColors(nextIndex)
+          val colorStr = NonEmptyList[Rgba](transparent, colors)
+            .reduce((x: Rgba, y: Rgba) => x add y).toColorStyleString
           List(
             <.span(
               ^.key := s"space-$nextIndex",
@@ -372,10 +421,8 @@ object Browser {
       },
       renderWord = (index: Int) => {
         if(!spanContains(containingSpan, index)) List() else {
-          val colorStr = NonEmptyList(
-            transparent,
-            List.fill(indexToNumContainingSpans(index) - 1)(highlightyYellow)
-          ).reduce((x: Rgba, y: Rgba) => x add y).toColorStyleString
+          val colorStr = NonEmptyList(transparent, wordIndexToLayeredColors(index))
+            .reduce((x: Rgba, y: Rgba) => x add y).toColorStyleString
           List(
             <.span(
               ^.key := s"word-$index",
@@ -409,7 +456,7 @@ object Browser {
     val answerHighlighties = contigSpanLists.reverse.map(spanList =>
       List(
         <.span(
-          makeAnswerHighlighty(sentenceTokens, spanList)
+          renderSentenceWithHighlights(sentenceTokens, RenderRelevantPortion(spanList.map(_ -> answerHighlightLayer)))
         )
       )
     ).intercalate(List(<.span(" / ")))
@@ -418,15 +465,49 @@ object Browser {
     }
   }
 
+  def shouldAnswerBeIncluded(
+    source: AnswerSource,
+    slices: Slices
+  ): Boolean = {
+    // show answers from other rounds as well when looking at eval round
+    import AnnotationRound._
+    source.round match {
+      case Original => slices.original || slices.eval
+      case Expansion => slices.expansion || slices.eval
+      case Eval => slices.eval
+    }
+  }
+
+  def isQuestionValid(
+    label: QuestionLabel,
+    slices: Slices
+  ): Boolean = {
+    val includedJudgments = label.answerJudgments.filter(aj =>
+      shouldAnswerBeIncluded(AnswerSource.fromString(aj.sourceId), slices)
+    )
+    val numValidJudgments = includedJudgments.count(_.judgment.isAnswer)
+    numValidJudgments.toDouble / includedJudgments.size > (4.99 / 6.0)
+  }
+
   def qaLabelRow(
     sentence: Sentence,
     label: QuestionLabel,
-    origOnly: Boolean
+    slices: Slices
   ) = {
-    val answerJudgments = label.answerJudgments.filter(aj =>
-      !origOnly || AnswerSource.fromString(aj.sourceId).round == AnnotationRound.Original
-    )
+    val answerJudgments = label.answerJudgments.filter { aj =>
+      shouldAnswerBeIncluded(AnswerSource.fromString(aj.sourceId), slices)
+    }
+    val qSource = label.questionSources.map(s => QuestionSource.fromString(s): QuestionSource).min
+    val roundIndicatorStyle = qSource match {
+      case QuestionSource.Turker(_) => S.originalRoundIndicator
+      case QuestionSource.Model(_)  =>
+        val hasAnswersInExpansion = label.answerJudgments.map(_.sourceId).exists(s =>
+          AnswerSource.fromString(s).round == AnnotationRound.Expansion
+        )
+        if(hasAnswersInExpansion) S.expansionRoundIndicator else S.evalRoundIndicator
+    }
     <.tr(S.qaPairRow)(
+      <.td(roundIndicatorStyle),
       <.td(S.questionCell)(
         <.span(S.questionText)(
           label.questionString
@@ -435,10 +516,10 @@ object Browser {
       <.td(S.validityCell) {
         val numJudgments = answerJudgments.size
         val numValidJudgments = answerJudgments.count(_.judgment.isAnswer)
-        val isConsideredValid = isQuestionValid(label)
-          <.span(if(isConsideredValid) S.validValidityText else S.invalidValidityText)(
-            s"$numValidJudgments/$numJudgments"
-          )
+        val isConsideredValid = isQuestionValid(label, slices)
+        <.span(if(isConsideredValid) S.validValidityText else S.invalidValidityText)(
+          s"$numValidJudgments/$numJudgments"
+        )
       },
       <.td(S.answerCell)(
         <.span(S.answerText) {
@@ -454,11 +535,29 @@ object Browser {
     )
   }
 
+  def shouldQuestionBeShown(
+    label: QuestionLabel,
+    slices: Slices,
+    validOnly: Boolean
+  ): Boolean = {
+    (!validOnly || isQuestionValid(label, slices)) && {
+      import AnnotationRound._
+      val hasEvalAnswers = label.answerJudgments.map(aj => AnswerSource.fromString(aj.sourceId).round).contains(Eval)
+      (hasEvalAnswers && slices.eval) || (
+        getRoundForQuestion(label) match {
+          case Original  => slices.original
+          case Expansion => slices.expansion
+          case Eval      => slices.eval
+        }
+      )
+    }
+  }
+
   def verbEntryDisplay(
     curSentence: Sentence,
     verb: VerbEntry,
-    validOnly: Boolean,
-    origOnly: Boolean
+    slices: Slices,
+    validOnly: Boolean
   ) = {
     <.div(S.verbEntryDisplay)(
       <.div(S.verbHeading)(
@@ -469,14 +568,13 @@ object Browser {
       <.table(S.verbQAsTable)(
         <.tbody(S.verbQAsTableBody){
           val questionLabels = verb.questionLabels.toList.map(_._2)
-            .filter(l => !validOnly || isQuestionValid(l))
+            .filter(l => shouldQuestionBeShown(l, slices, validOnly))
             .sorted
           if(questionLabels.isEmpty) {
-            <.span(S.loadingNotice)("No valid questions.")
+            <.span(S.loadingNotice)("All questions have been filtered out.")
           } else questionLabels
-            .filter(ql => !origOnly || ql.questionSources.map(QuestionSource.fromString).exists(_.isTurker))
             .toVdomArray { label =>
-            qaLabelRow(curSentence, label, origOnly)(^.key := label.questionString)
+            qaLabelRow(curSentence, label, slices)(^.key := label.questionString)
           }
         }
       )
@@ -487,10 +585,20 @@ object Browser {
     part: DatasetPartition,
     docMeta: DocumentMetadata,
     sentence: Sentence,
-    validOnly: Boolean,
-    origOnly: Boolean
+    slices: Slices,
+    validOnly: Boolean
   ) = {
     val sentenceId = SentenceId.fromString(sentence.sentenceId)
+    // TODO color differently depending on verb; add verb colors
+    val answerSpansWithColors = for {
+      verb <- sentence.verbEntries.values.toList
+      question <- verb.questionLabels.values.toList
+      if shouldQuestionBeShown(question, slices, validOnly)
+      answerLabel <- question.answerJudgments
+      if shouldAnswerBeIncluded(AnswerSource.fromString(answerLabel.sourceId), slices)
+      Answer(spans) <- answerLabel.judgment.getAnswer.toList
+      span <- spans.toList
+    } yield span -> answerHighlightLayer
     DivReference.make(
       <.div(S.sentenceBox)(
         <.div(S.sentenceInfoContainer)(
@@ -501,7 +609,7 @@ object Browser {
         ),
         <.div(S.sentenceTextContainer)(
           <.span(S.sentenceText)(
-            Text.render(sentence.sentenceTokens)
+            renderSentenceWithHighlights(sentence.sentenceTokens, RenderWholeSentence(answerSpansWithColors))
           )
         )
       )
@@ -514,7 +622,7 @@ object Browser {
               <.div(S.verbEntriesContainer)(
                 ^.paddingTop := s"${height}px",
                 sentence.verbEntries.values.toList.sortBy(_.verbIndex).toVdomArray { verb =>
-                  verbEntryDisplay(sentence, verb, validOnly, origOnly)(^.key := verb.verbIndex)
+                  verbEntryDisplay(sentence, verb, slices, validOnly)(^.key := verb.verbIndex)
                 }
               )
           }
@@ -522,68 +630,72 @@ object Browser {
     }
   }
 
+  def sentenceSelectionPane(
+    numSentencesInDocument: Int,
+    curSentences: SortedSet[Sentence],
+    searchQuery: Set[LowerCaseString],
+    curSentence: StateVal[Sentence]
+  ) = {
+    val sentenceCountLabel = if(curSentences.size == numSentencesInDocument) {
+      s"$numSentencesInDocument sentences"
+    } else {
+      s"${curSentences.size} / $numSentencesInDocument sentences"
+    }
+
+    <.div(S.scrollPane)(
+      <.div(S.sentenceCountLabel)(
+        <.span(S.sentenceCountLabelText)(
+          sentenceCountLabel
+        )
+      ),
+      <.div(S.sentenceSelectionPane)(
+        curSentences.toVdomArray { sentence =>
+          val spanHighlights = qasrl.bank.service.getQueryMatchesInSentence(sentence, searchQuery).toList.map(index =>
+            AnswerSpan(index, index + 1) -> queryKeywordHighlightLayer
+          )
+          <.div(S.sentenceSelectionEntry)(
+            ^.key := sentence.sentenceId,
+            if(sentence == curSentence.get) S.currentSelectionEntry else S.nonCurrentSelectionEntry,
+            ^.onClick --> curSentence.set(sentence),
+            <.span(S.sentenceSelectionEntryText)(
+              renderSentenceWithHighlights(sentence.sentenceTokens, RenderWholeSentence(spanHighlights))
+            )
+          )
+        }
+      )
+    )
+  }
+
+  def docSelectionPane(
+    totalNumDocs: Int,
+    curDocMetas: SortedSet[DocumentMetadata],
+    curDocMeta: StateVal[DocumentMetadata]
+  ) = {
+    <.div(
+      S.scrollPane,
+      <.div(S.documentCountLabel)(
+        <.span(S.documentCountLabelText)(
+          s"${curDocMetas.size} / $totalNumDocs documents"
+        )
+      ),
+      <.div(S.documentSelectionPane)(
+        curDocMetas.toVdomArray { docMeta =>
+          <.div(S.documentSelectionEntry)(
+            ^.key := docMeta.id.toString,
+            if(docMeta == curDocMeta.get) S.currentSelectionEntry else S.nonCurrentSelectionEntry,
+            ^.onClick --> curDocMeta.set(docMeta),
+            <.span(S.documentSelectionEntryText)(
+              docMeta.title
+            )
+          )
+        }
+      )
+    )
+  }
+
   val S = BrowserStyles
 
   class Backend(scope: BackendScope[Props, State]) {
-
-    def docSelectionPane(
-      totalNumDocs: Int,
-      curDocMetas: SortedSet[DocumentMetadata],
-      curDocMeta: StateVal[DocumentMetadata]
-    ) = {
-      <.div(
-        S.scrollPane,
-        <.div(S.documentCountLabel)(
-          <.span(S.documentCountLabelText)(
-            s"${curDocMetas.size} / $totalNumDocs documents"
-          )
-        ),
-        <.div(S.documentSelectionPane)(
-          curDocMetas.toVdomArray { docMeta =>
-            <.div(S.documentSelectionEntry)(
-              ^.key := docMeta.id.toString,
-              if(docMeta == curDocMeta.get) S.currentSelectionEntry else S.nonCurrentSelectionEntry,
-              ^.onClick --> curDocMeta.set(docMeta),
-              <.span(S.documentSelectionEntryText)(
-                docMeta.title
-              )
-            )
-          }
-        )
-      )
-    }
-
-    def sentenceSelectionPane(
-      numSentencesInDocument: Int,
-      curSentences: SortedSet[Sentence],
-      searchQuery: Set[LowerCaseString],
-      curSentence: StateVal[Sentence]
-    ) = {
-      val sentenceCountLabel = if(curSentences.size == numSentencesInDocument) {
-        s"$numSentencesInDocument sentences"
-      } else {
-        s"${curSentences.size} / $numSentencesInDocument sentences"
-      }
-      <.div(S.scrollPane)(
-        <.div(S.sentenceCountLabel)(
-          <.span(S.sentenceCountLabelText)(
-            sentenceCountLabel
-          )
-        ),
-        <.div(S.sentenceSelectionPane)(
-          curSentences.toVdomArray { sentence =>
-            <.div(S.sentenceSelectionEntry)(
-              ^.key := sentence.sentenceId,
-              if(sentence == curSentence.get) S.currentSelectionEntry else S.nonCurrentSelectionEntry,
-              ^.onClick --> curSentence.set(sentence),
-              <.span(S.sentenceSelectionEntryText)(
-                Text.render(sentence.sentenceTokens)
-              )
-            )
-          }
-        )
-      )
-    }
 
     def render(props: Props, state: State) = {
       val stateVal = makeStateValForState(scope, state)
@@ -620,7 +732,7 @@ object Browser {
                           <.span(S.loadingNotice)("Loading document...")
                         )
                       case DocFetch.Loaded(doc) =>
-                        val curSentences = getCurSentences(doc.sentences, state.search.query, index.denseIds, state.filter.denseOnly)
+                        val curSentences = getCurSentences(doc.sentences, state.search.query, index.denseIds, state.filter.slices)
                         if(curSentences.isEmpty) {
                           <.div(
                             <.div(<.span(S.loadingNotice)("Current document: " + doc.metadata.title)),
@@ -632,14 +744,14 @@ object Browser {
                               doc.sentences.size,
                               curSentences,
                               state.search.query,
-                              curSentence
+                              curSentence,
                             ),
                             sentenceDisplayPane(
                               index.getPart(curDocMeta.get.id),
                               curDocMeta.get,
                               curSentence.get,
-                              state.filter.validOnly,
-                              state.filter.origOnly
+                              state.filter.slices,
+                              state.filter.validOnly
                             )
                           )
                         }
