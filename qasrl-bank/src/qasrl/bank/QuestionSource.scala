@@ -1,5 +1,8 @@
 package qasrl.bank
 
+import cats.Order
+import cats.implicits._
+
 sealed trait QuestionSource {
   import QuestionSource._
   def getModel = Some(this).collect { case x: Model => x }
@@ -17,4 +20,15 @@ object QuestionSource {
     case ModelMatch(version) => Model(version)
     case TurkerMatch(id) => Turker(id)
   }
+
+  implicit val questionSourceOrder: Order[QuestionSource] = Order.whenEqual(
+    Order.by[QuestionSource, Int] {
+      case Turker(_) => 0
+      case Model(_) => 1
+    },
+    Order.by[QuestionSource, String] {
+      case Turker(id) => id
+      case Model(ver) => ver
+    }
+  )
 }

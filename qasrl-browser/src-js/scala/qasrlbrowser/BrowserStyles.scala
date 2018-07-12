@@ -68,20 +68,63 @@ object BrowserStyles extends StyleSheet.Inline {
     addClassNames("form-check", "px-3")
   )
 
-  val partitionTitle = style()
   val partitionChooser = style(
     filterChooser
   )
 
-  val domainTitle = style()
   val domainChooser = style(
     filterChooser
   )
 
-  val denseOnlyTitle = style()
-  val denseOnlyChooser = style(
+  val additionalFiltersChooser = style(
     filterChooser
   )
+
+  // legend
+
+  val legendContainer = style()
+
+  val legendTitle = style()
+  val legendTitleText = style(
+    fontWeight.bold
+  )
+  val legendTitleLinkText = style()
+
+  val helpModal = style(
+    addClassNames("modal", "fade")
+  )
+  val helpModalDialog = style(
+    addClassNames("modal-dialog")
+  )
+  val helpModalContent = style(
+    addClassNames("modal-content")
+  )
+  val helpModalHeader = style(
+    addClassNames("modal-header")
+  )
+  val helpModalTitle = style(
+    addClassNames("modal-title"),
+    fontWeight.bold,
+    fontSize(16 pt)
+  )
+  val helpModalHeaderCloseButton = style(
+    addClassNames("close")
+  )
+  val helpModalBody = style(
+    addClassNames("modal-body")
+  )
+  val helpModalFooter = style(
+    addClassNames("modal-footer")
+  )
+  val helpModalFooterCloseButton = style(
+    addClassNames("btn", "btn-secondary")
+  )
+
+  val validityLegend = style()
+
+  val highlightLegend = style()
+  val legendColorIndicator = style()
+
 
   // main data display
 

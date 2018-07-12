@@ -23,12 +23,15 @@ import monocle.function.{all => Optics}
 import monocle.macros._
 import japgolly.scalajs.react.MonocleReact._
 
+import qasrl.bank.AnswerSource
+import qasrl.bank.AnnotationRound
 import qasrl.bank.DataIndex
 import qasrl.bank.DatasetPartition
 import qasrl.bank.Document
 import qasrl.bank.DocumentId
 import qasrl.bank.DocumentMetadata
 import qasrl.bank.Domain
+import qasrl.bank.QuestionSource
 import qasrl.bank.SentenceId
 
 import qasrl.bank.service.{CacheCall, Cached, Remote}
@@ -56,6 +59,7 @@ object Browser {
   val DocFetch = new CacheCallContentComponent[DocumentId, Document]
   val SentLocal = new LocalStateComponent[Sentence]
   val DivReference = new ReferenceComponent[html.Div]
+  val BoolLocal = new LocalStateComponent[Boolean]
 
   case class Props(
     qasrl: DocumentService[CacheCall]
@@ -72,6 +76,7 @@ object Browser {
   @Lenses case class Filters(
     partitions: Set[DatasetPartition],
     domains: Set[Domain],
+    origOnly: Boolean,
     denseOnly: Boolean,
     validOnly: Boolean
   )
@@ -79,6 +84,7 @@ object Browser {
     def initial = Filters(
       Set(DatasetPartition.Dev),
       Set(Domain.Wikipedia),
+      false,
       false,
       false
     )
@@ -132,6 +138,9 @@ object Browser {
     scope: BackendScope[P, S],
     state: S
   ) = StateVal[S](state, s => scope.setState(s))
+
+  val transparent = Rgba(255, 255, 255, 0.0)
+  val highlightyYellow = Rgba(255, 255, 0, 0.2)
 
   def checkboxToggle[A](
     label: String,
@@ -188,9 +197,86 @@ object Browser {
         checkboxToggle("Wikinews",  filter.zoom(Filters.wikinews)),
         checkboxToggle("TQA",       filter.zoom(Filters.tqa))
       ),
-      <.div(S.denseOnlyChooser)(
+      <.div(S.additionalFiltersChooser)(
+        checkboxToggle("Original only", filter.zoom(Filters.origOnly)),
         checkboxToggle("Dense only", filter.zoom(Filters.denseOnly)),
         checkboxToggle("Valid only", filter.zoom(Filters.validOnly))
+      )
+    )
+  }
+
+  val helpModalId = "help-modal"
+  val helpModalLabelId = "help-modal-label"
+  val dataToggle = VdomAttr("data-toggle")
+  val dataTarget = VdomAttr("data-target")
+  val ariaLabelledBy = VdomAttr("aria-labelledby")
+  val ariaHidden = VdomAttr("aria-hidden")
+  val dataDismiss = VdomAttr("data-dismiss")
+  val ariaLabel = VdomAttr("aria-label")
+
+  def helpModal = {
+    <.div(^.id := helpModalId)(
+      S.helpModal, ^.tabIndex := -1, ^.role := "dialog",
+      ariaLabelledBy := helpModalLabelId, ariaHidden := true
+    )(
+      <.div(S.helpModalDialog, ^.role := "document")(
+        <.div(S.helpModalContent)(
+          <.div(S.helpModalHeader)(
+            <.span(S.helpModalTitle)(
+              ^.id := helpModalLabelId,
+              "Full legend"
+            ),
+            <.button(S.helpModalHeaderCloseButton)(
+              ^.`type` := "button", dataDismiss := "modal", ariaLabel := "Close",
+              <.span(ariaHidden := true, "×")
+            )
+          ),
+          <.div(S.helpModalBody)(
+            "Full legend description is under construction."
+          ),
+          <.div(S.helpModalFooter)(
+            <.button(S.helpModalFooterCloseButton)(
+              ^.`type` := "button", dataDismiss := "modal")(
+              "Close"
+            )
+          )
+        )
+      )
+    )
+  }
+
+
+  def legendPane = {
+    <.div(S.legendContainer)(
+      <.div(S.legendTitle)(
+        <.span(S.legendTitleText)("Legend "),
+        <.span(S.legendTitleLinkText)(
+          <.a(
+            ^.href := "#", "(help)",
+            dataToggle := "modal",
+            dataTarget := s"#$helpModalId"
+          )
+        )
+      ),
+      <.div(S.validityLegend)(
+        <.span(S.invalidValidityText)("4/6"),
+        <.span(" or fewer valid judgments = invalid, "),
+        <.span(S.validValidityText)("5/6"),
+        <.span(" or more = valid")
+      ),
+      <.div(S.highlightLegend)(
+        <.span("Answer provided by "),
+        (1 to 6).toVdomArray { i =>
+          val colorStr = NonEmptyList(
+            transparent,
+            List.fill(i - 1)(highlightyYellow)
+          ).reduce((x: Rgba, y: Rgba) => x add y).toColorStyleString
+          <.span(S.legendColorIndicator)(
+            ^.style := js.Dynamic.literal("backgroundColor" -> colorStr),
+            f"$i%d"
+          )
+        },
+        <.span(" annotators")
       )
     )
   }
@@ -201,7 +287,8 @@ object Browser {
         <.h1(S.title)("QA-SRL Bank 2.0"),
         searchPane(state.zoom(State.search))
       ),
-      filterPane(state.zoom(State.filter))
+      filterPane(state.zoom(State.filter)),
+      legendPane
     )
   }
 
@@ -230,16 +317,20 @@ object Browser {
     searchFilteredSentences.intersect(denseFilteredSentences)
   }
 
-  // sealed trait AnswerJudgmentIndicator
-  // case object InvalidIndicator extends AnswerJudgmentIndicator
-  // case class SpanIndicator(span: AnswerSpan) extends AnswerJudgmentIndicator
-  // object AnswerJudgmentIndicator {
-  // }
-  implicit val answerSpanOrder = Order.whenEqual(
+  import qasrl.bank.RichOrderObject
+  import cats.Order.catsKernelOrderingForOrder
+
+  implicit val answerSpanOrder: Order[AnswerSpan] = Order.whenEqual(
     Order.by[AnswerSpan, Int](_.begin),
     Order.by[AnswerSpan, Int](_.end)
   )
-  import cats.Order.catsKernelOrderingForOrder
+  implicit val qasrlDataQuestionLabelOrder: Order[QuestionLabel] = Order.whenEqualMany(
+    // first annotation round where question appeared
+    Order.by[QuestionLabel, QuestionSource](_.questionSources.map(s => QuestionSource.fromString(s): QuestionSource).min),
+    // last annotation round where question was answered? maybe doesn't matter...
+    // Order.by[QuestionLabel, AnswerSource](_.answerJudgments.map(_.sourceId).maximumOpt.get),
+    Order.by[QuestionLabel, String](_.questionString)
+  )
 
   def spanOverlaps(x: AnswerSpan, y: AnswerSpan): Boolean = {
     x.begin < y.end && y.begin < x.end
@@ -247,9 +338,6 @@ object Browser {
   def spanContains(s: AnswerSpan, q: Int): Boolean = {
     q >= s.begin && q < s.end
   }
-
-  val transparent = Rgba(255, 255, 255, 0.0)
-  val highlightyYellow = Rgba(255, 255, 0, 0.2)
 
   def makeAnswerHighlighty(
     sentenceTokens: Vector[String],
@@ -332,8 +420,12 @@ object Browser {
 
   def qaLabelRow(
     sentence: Sentence,
-    label: QuestionLabel
+    label: QuestionLabel,
+    origOnly: Boolean
   ) = {
+    val answerJudgments = label.answerJudgments.filter(aj =>
+      !origOnly || AnswerSource.fromString(aj.sourceId).round == AnnotationRound.Original
+    )
     <.tr(S.qaPairRow)(
       <.td(S.questionCell)(
         <.span(S.questionText)(
@@ -341,8 +433,8 @@ object Browser {
         )
       ),
       <.td(S.validityCell) {
-        val numJudgments = label.answerJudgments.size
-        val numValidJudgments = label.answerJudgments.count(_.judgment.isAnswer)
+        val numJudgments = answerJudgments.size
+        val numValidJudgments = answerJudgments.count(_.judgment.isAnswer)
         val isConsideredValid = isQuestionValid(label)
           <.span(if(isConsideredValid) S.validValidityText else S.invalidValidityText)(
             s"$numValidJudgments/$numJudgments"
@@ -351,7 +443,7 @@ object Browser {
       <.td(S.answerCell)(
         <.span(S.answerText) {
           NonEmptyList.fromList(
-            label.answerJudgments.toList.collect {
+            answerJudgments.toList.collect {
               case AnswerLabel(sourceId, Answer(spans)) => Answer(spans)
             }
           ).whenDefined { answersNel =>
@@ -365,7 +457,8 @@ object Browser {
   def verbEntryDisplay(
     curSentence: Sentence,
     verb: VerbEntry,
-    validOnly: Boolean
+    validOnly: Boolean,
+    origOnly: Boolean
   ) = {
     <.div(S.verbEntryDisplay)(
       <.div(S.verbHeading)(
@@ -377,11 +470,13 @@ object Browser {
         <.tbody(S.verbQAsTableBody){
           val questionLabels = verb.questionLabels.toList.map(_._2)
             .filter(l => !validOnly || isQuestionValid(l))
-            .sortBy(_.questionString)
+            .sorted
           if(questionLabels.isEmpty) {
             <.span(S.loadingNotice)("No valid questions.")
-          } else questionLabels.toVdomArray { label =>
-            qaLabelRow(curSentence, label)(^.key := label.questionString)
+          } else questionLabels
+            .filter(ql => !origOnly || ql.questionSources.map(QuestionSource.fromString).exists(_.isTurker))
+            .toVdomArray { label =>
+            qaLabelRow(curSentence, label, origOnly)(^.key := label.questionString)
           }
         }
       )
@@ -392,7 +487,8 @@ object Browser {
     part: DatasetPartition,
     docMeta: DocumentMetadata,
     sentence: Sentence,
-    validOnly: Boolean
+    validOnly: Boolean,
+    origOnly: Boolean
   ) = {
     val sentenceId = SentenceId.fromString(sentence.sentenceId)
     DivReference.make(
@@ -418,7 +514,7 @@ object Browser {
               <.div(S.verbEntriesContainer)(
                 ^.paddingTop := s"${height}px",
                 sentence.verbEntries.values.toList.sortBy(_.verbIndex).toVdomArray { verb =>
-                  verbEntryDisplay(sentence, verb, validOnly)(^.key := verb.verbIndex)
+                  verbEntryDisplay(sentence, verb, validOnly, origOnly)(^.key := verb.verbIndex)
                 }
               )
           }
@@ -492,6 +588,7 @@ object Browser {
     def render(props: Props, state: State) = {
       val stateVal = makeStateValForState(scope, state)
       <.div(S.mainContainer)(
+        helpModal,
         headerPane(stateVal),
         IndexFetch.make(request = (), sendRequest = _ => props.qasrl.getDataIndex) {
           case IndexFetch.Loading =>
@@ -541,7 +638,8 @@ object Browser {
                               index.getPart(curDocMeta.get.id),
                               curDocMeta.get,
                               curSentence.get,
-                              state.filter.validOnly
+                              state.filter.validOnly,
+                              state.filter.origOnly
                             )
                           )
                         }
