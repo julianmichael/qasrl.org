@@ -130,6 +130,10 @@ object BrowserStyles extends StyleSheet.Inline {
     addClassNames("btn", "btn-secondary")
   )
 
+  val helpWarningAlert = style(
+    addClassNames("alert", "alert-warning")
+  )
+
   // main data display
 
   val dataContainer = style(
@@ -293,6 +297,12 @@ object BrowserStyles extends StyleSheet.Inline {
     addClassNames("pb-3"),
   )
 
+  val verbAnchorLink = style(
+    &.hover(
+      textDecoration := "none"
+    )
+  )
+
   val verbEntriesContainer = style()
 
   val loadingNotice = style(
@@ -369,8 +379,12 @@ object BrowserStyles extends StyleSheet.Inline {
 
   // back to table (question cells etc)
 
-  val questionCell = style(
+  val questionCellPadding = style(
     addClassNames("pl-1"),
+  )
+
+  val questionCell = style(
+    questionCellPadding,
     width(12 rem)
   )
   val questionText = style()
@@ -393,4 +407,22 @@ object BrowserStyles extends StyleSheet.Inline {
   val answerText = style()
 
   val qaPairDisplay = style()
+
+  val questionFullDescriptionCell = style(
+    padding(0 px),
+    margin(0 px)
+  )
+
+  val questionSourceText = style(
+    questionCellPadding
+  )
+
+  val answerSourceIdCell = style(
+    width(15 rem)
+  )
+
+  val dummyRow = style(
+    margin(0 px),
+    padding(0 px)
+  )
 }

@@ -61,6 +61,7 @@ object Browser {
   val DivReference = new ReferenceComponent[html.Div]
   val BoolLocal = new LocalStateComponent[Boolean]
   val OptIntLocal = new LocalStateComponent[Option[Int]]
+  val QuestionLabelSetLocal = new LocalStateComponent[Set[QuestionLabel]]
 
   case class Props(
     qasrl: DocumentService[CacheCall]
@@ -235,7 +236,7 @@ object Browser {
       <.div(S.helpModalDialog, ^.role := "document")(
         <.div(S.helpModalContent)(
           <.div(S.helpModalHeader)(
-            <.span(S.helpModalTitle)(
+            <.h2(S.helpModalTitle)(
               ^.id := helpModalLabelId,
               "QA-SRL Bank 2.0 Browser"
             ),
@@ -247,14 +248,14 @@ object Browser {
           <.div(S.helpModalBody)(
             <.p(
               "This page presents the complete dataset collected in the paper ",
-              <.a(^.href := "#", "Large-Scale QA-SRL Parsing"),
+              <.a(^.href := "https://arxiv.org/pdf/1805.05377.pdf", "Large-Scale QA-SRL Parsing"),
               ", by Nicholas FitzGerald, Julian Michael, Luheng He, and Luke Zettlemoyer, ",
               "presented at ACL 2018. ",
               "We crowdsourced a large (>64,000 sentence) dataset in several stages. ",
               "In this data browser you can explore how the data looked at each stage and in each domain. ",
               "A full description of the interface is given below. "
             ),
-            <.p( // TODO use proper bootstrap type for this
+            <.p(S.helpWarningAlert)(
               <.b("Warning: "), "This interface will be messed up on mobile or if your window is too narrow. ",
               "If the interface seems laid out wrong, try zooming out in your browser (e.g., cmd+minus on Chrome on Mac) ",
               "or widening your browser window. "
@@ -268,32 +269,36 @@ object Browser {
               "Annotators could also mark questions as invalid. "
             ),
             <.p(
-              "We annotated data across 3 domains: ",
-              <.ul(
-                <.li(
-                  <.a(^.href := "https://en.wikipedia.org", "Wikipedia"), ", "
-                ),
-                <.li(
-                  <.a(^.href := "https://en.wikinews.org",  "Wikinews"),  ", and " // TODO check link
-                ),
-                <.li(
-                  " science textboooks (from the ",
-                  <.a(^.href := "#",  "Textbook Question Answering"),  " dataset)." // TODO link
-                )
+              "We annotated data across 3 domains: "
+            ),
+            <.ul(
+              <.li(
+                <.a(^.href := "https://en.wikipedia.org", "Wikipedia"), ", "
               ),
-              "The data was also annotated in three stages: ",
-              <.ul(
-                <.li(
-                  <.b("Original"), ": workers on Mechanical Turk wrote and answered questions for each verb,"
-                ),
-                <.li(
-                  <.b("Expansion"), ": a model trained on the original data produced questions, which turkers answered, and"
-                ),
-                <.li(
-                  <.b("Eval"), ": for a small subset of dev and test, we overgenerated questions from our baseline models ",
-                  "and had annotators answer them at twice the original density (from 3 to 6 answer judgments per question)."
-                )
+              <.li(
+                <.a(^.href := "https://en.wikinews.org",  "Wikinews"),  ", and "
               ),
+              <.li(
+                " science textboooks (from the ",
+                <.a(^.href := "http://data.allenai.org/tqa/",  "Textbook Question Answering"),  " dataset)."
+              )
+            ),
+            <.p(
+              "The data was also annotated in three stages: "
+            ),
+            <.ul(
+              <.li(
+                <.b("Original"), ": workers on Mechanical Turk wrote and answered questions for each verb,"
+              ),
+              <.li(
+                <.b("Expansion"), ": a model trained on the original data produced questions, which turkers answered, and"
+              ),
+              <.li(
+                <.b("Eval"), ": for a small subset of dev and test, we overgenerated questions from our baseline models ",
+                "and had annotators answer them at twice the original density (from 3 to 6 answer judgments per question)."
+              )
+            ),
+            <.p(
               "Since workers could mark questions as invalid, our convention is to count a question as valid if at least ",
               "5/6 of its questions are valid — so all 3, in the case of 3 answers, or 5 out of 6 in the case of 6."
             ),
@@ -339,17 +344,22 @@ object Browser {
               "indicate more than one worker highlighting a span or word. ",
               "Spans are color-coded according to the verb whose question they were used to answer. ",
               "Hovering the mouse over a verb or its entry in the data table will restrict the highlighted spans to ",
-              "answers of questions written for that verb. "
+              "answers of questions written for that verb. ",
+              "Clicking on a verb in the sentence will scroll the display to the QA pairs for that verb. "
             ),
             <.p(
               "Questions are also color-coded with a vertical line on their left, ",
               "based on the annotation round in which they were first introduced: ",
-              <.div(S.originalLegendMark)("m"),
+              <.span(S.originalLegendMark)("m"),
               <.span(" Original, "),
-              <.div(S.expansionLegendMark)("m"),
+              <.span(S.expansionLegendMark)("m"),
               <.span(" Expansion, and "),
-              <.div(S.evalLegendMark)("m"),
+              <.span(S.evalLegendMark)("m"),
               <.span(" Eval.")
+            ),
+            <.p(
+              "Finally, for full details on the sources of each question and answer, you can click on a question or answer ",
+              "and these details will appear below it in the table. Click on it again and they will disappear. "
             )
           ),
           <.div(S.helpModalFooter)(
@@ -434,11 +444,7 @@ object Browser {
       allSentences
     } else {
       allSentences.filter { sent =>
-        val sentTokenSet = sent.sentenceTokens
-          .flatMap(t => List(t, Text.normalizeToken(t)))
-          .map(_.lowerCase)
-          .toSet
-        sentTokenSet.intersect(query).nonEmpty
+        qasrl.bank.service.getQueryMatchesInSentence(sent, query).nonEmpty
       }
     }
     val sliceFilteredSentences = allSentences.filter { sent =>
@@ -489,7 +495,7 @@ object Browser {
   def renderSentenceWithHighlights(
     sentenceTokens: Vector[String],
     coloringSpec: SpanColoringSpec,
-    wordAttributes: Map[Int, TagMod] = Map()
+    wordRenderers : Map[Int, VdomTag => VdomTag] = Map()
   ) = {
     val containingSpan = coloringSpec match {
       case RenderWholeSentence(_) =>
@@ -529,14 +535,14 @@ object Browser {
         if(!spanContains(containingSpan, index)) List() else {
           val colorStr = NonEmptyList(transparent, wordIndexToLayeredColors(index))
             .reduce((x: Rgba, y: Rgba) => x add y).toColorStyleString
-          List(
+          val render: (VdomTag => VdomTag) = wordRenderers.get(index).getOrElse((x: VdomTag) => x)
+          val element: VdomTag = render(
             <.span(
-              wordAttributes.get(index).whenDefined,
-              ^.key := s"word-$index",
               ^.style := js.Dynamic.literal("backgroundColor" -> colorStr),
               Text.normalizeToken(sentenceTokens(index))
             )
           )
+          List(element(^.key := s"word-$index"))
         }
       }
     ).toVdomArray(x => x)
@@ -597,11 +603,15 @@ object Browser {
     numValidJudgments.toDouble / includedJudgments.size > (4.99 / 6.0)
   }
 
+  val colspan = VdomAttr("colspan")
+
   def qaLabelRow(
     sentence: Sentence,
     label: QuestionLabel,
     slices: Slices,
-    color: Rgba
+    color: Rgba,
+    toggleQ: Callback,
+    fullDetail: Boolean
   ) = {
     val answerJudgments = label.answerJudgments.filter { aj =>
       shouldAnswerBeIncluded(AnswerSource.fromString(aj.sourceId), slices)
@@ -615,33 +625,84 @@ object Browser {
         )
         if(hasAnswersInExpansion) S.expansionRoundIndicator else S.evalRoundIndicator
     }
-    <.tr(S.qaPairRow)(
-      <.td(roundIndicatorStyle),
-      <.td(S.questionCell)(
-        <.span(S.questionText)(
-          label.questionString
-        )
-      ),
-      <.td(S.validityCell) {
-        val numJudgments = answerJudgments.size
-        val numValidJudgments = answerJudgments.count(_.judgment.isAnswer)
-        val isConsideredValid = isQuestionValid(label, slices)
-        <.span(if(isConsideredValid) S.validValidityText else S.invalidValidityText)(
-          s"$numValidJudgments/$numJudgments"
-        )
-      },
-      <.td(S.answerCell)(
-        <.span(S.answerText) {
-          NonEmptyList.fromList(
-            answerJudgments.toList.collect {
-              case AnswerLabel(sourceId, Answer(spans)) => Answer(spans)
+    if(!fullDetail) {
+      <.tr(S.qaPairRow)(
+        ^.onClick --> toggleQ,
+        <.td(roundIndicatorStyle),
+        <.td(S.questionCell)(
+          <.span(S.questionText)(
+            label.questionString
+          )
+        ),
+        <.td(S.validityCell) {
+          val numJudgments = answerJudgments.size
+          val numValidJudgments = answerJudgments.count(_.judgment.isAnswer)
+          val isConsideredValid = isQuestionValid(label, slices)
+            <.span(if(isConsideredValid) S.validValidityText else S.invalidValidityText)(
+              s"$numValidJudgments/$numJudgments"
+            )
+        },
+        <.td(S.answerCell)(
+          <.span(S.answerText) {
+            NonEmptyList.fromList(
+              answerJudgments.toList.collect {
+                case AnswerLabel(sourceId, Answer(spans)) => Answer(spans)
+              }
+            ).whenDefined { answersNel =>
+              makeAllHighlightedAnswer(sentence.sentenceTokens, answersNel, color)
             }
-          ).whenDefined { answersNel =>
-            makeAllHighlightedAnswer(sentence.sentenceTokens, answersNel, color)
           }
+        )
+      )
+    } else {
+      <.tr(S.qaPairRow)(
+        ^.onClick --> toggleQ,
+        <.td(roundIndicatorStyle),
+        <.td(S.questionFullDescriptionCell)(
+          ^.colSpan := 3
+        ) {
+          val questionSourceStr = label.questionSources
+            .map(qs => QuestionSource.fromString(qs): QuestionSource)
+            .min match {
+            case QuestionSource.Turker(id) => s"turker $id"
+            case QuestionSource.Model(ver) => s"model $ver"
+          }
+
+          <.div(
+            <.span(S.questionSourceText)(s"Written by $questionSourceStr"),
+            <.table(
+              <.tbody(
+                label.answerJudgments.toList.sortBy(aj => AnswerSource.fromString(aj.sourceId)).toVdomArray {
+                  case AnswerLabel(source, judgment) =>
+                    val AnswerSource(id, round) = AnswerSource.fromString(source)
+                    import AnnotationRound._
+                    val roundIndicatorStyle = round match {
+                      case Original  => S.originalRoundIndicator
+                      case Expansion => S.expansionRoundIndicator
+                      case Eval      => S.evalRoundIndicator
+                    }
+                    <.tr(
+                      ^.key := s"fulldesc-$source-$judgment",
+                      <.td(roundIndicatorStyle),
+                      <.td(S.answerSourceIdCell)(s"Turker $id"),
+                      <.td(
+                        judgment match {
+                          case InvalidQuestion => <.span(S.invalidValidityText)("Invalid")
+                          case Answer(spans) =>   <.span(
+                            spans.toList.sorted.map(s =>
+                              Text.renderSpan(sentence.sentenceTokens, (s.begin until s.end).toSet)
+                            ).mkString(" / ")
+                          )
+                        }
+                      )
+                    )
+                }
+              )
+            )
+          )
         }
       )
-    )
+    }
   }
 
   def shouldQuestionBeShown(
@@ -667,9 +728,19 @@ object Browser {
     verb: VerbEntry,
     slices: Slices,
     validOnly: Boolean,
-    color: Rgba
+    color: Rgba,
+    anchorCorrectionPixels: Int
   ) = {
     <.div(S.verbEntryDisplay)(
+      <.div(
+        <.a(
+          ^.name := s"verb-${verb.verbIndex}",
+          ^.display := "block",
+          ^.position := "relative",
+          ^.top := s"-${anchorCorrectionPixels}px",
+          ^.visibility := "hidden"
+        )
+      ),
       <.div(S.verbHeading)(
         <.span(S.verbHeadingText)(
           ^.color := color.copy(a = 1.0).toColorStyleString,
@@ -677,15 +748,25 @@ object Browser {
         )
       ),
       <.table(S.verbQAsTable)(
-        <.tbody(S.verbQAsTableBody){
-          val questionLabels = verb.questionLabels.toList.map(_._2)
-            .filter(l => shouldQuestionBeShown(l, slices, validOnly))
-            .sorted
-          if(questionLabels.isEmpty) {
-            <.tr(<.td(<.span((S.loadingNotice)("All questions have been filtered out."))))
-          } else questionLabels
-            .toVdomArray { label =>
-            qaLabelRow(curSentence, label, slices, color)(^.key := label.questionString)
+        QuestionLabelSetLocal.make(initialValue = Set()) { selectedQs =>
+          <.tbody(S.verbQAsTableBody){
+            val questionLabels = verb.questionLabels.toList.map(_._2)
+              .filter(l => shouldQuestionBeShown(l, slices, validOnly))
+              .sorted
+            if(questionLabels.isEmpty) {
+              <.tr(<.td(<.span((S.loadingNotice)("All questions have been filtered out."))))
+            } else questionLabels
+              .flatMap { label =>
+              val thisQToggled = selectedQs.zoom(Optics.at(label))
+              val toggleQ = thisQToggled.modify(!_)
+              List(
+                List(qaLabelRow(curSentence, label, slices, color, toggleQ, false)(^.key := s"short-${label.questionString}")),
+                List(
+                  <.tr(S.dummyRow)(^.key :=  s"dummy-${label.questionString}"),
+                  qaLabelRow(curSentence, label, slices, color, toggleQ, true)(^.key :=  s"full-${label.questionString}"),
+                ).filter(_ => thisQToggled.get)
+              ).flatten
+            }.toVdomArray(x => x)
           }
         }
       )
@@ -731,15 +812,21 @@ object Browser {
                 RenderWholeSentence(answerSpansWithColors),
                 verbColorMap.collect {
                   case (verbIndex, color) if highlightedVerbIndex.get.forall(_ == verbIndex) =>
-                    verbIndex -> TagMod(
-                      ^.color := color.copy(a = 1.0).toColorStyleString,
-                      ^.fontWeight := "bold",
-                      ^.onMouseMove --> (
-                        if(highlightedVerbIndex.get == Some(verbIndex)) {
-                          Callback.empty
-                        } else highlightedVerbIndex.set(Some(verbIndex))
-                      ),
-                      ^.onMouseOut --> highlightedVerbIndex.set(None)
+                    verbIndex -> (
+                      (v: VdomTag) => <.a(
+                        S.verbAnchorLink,
+                        ^.href := s"#verb-$verbIndex",
+                        v(
+                          ^.color := color.copy(a = 1.0).toColorStyleString,
+                          ^.fontWeight := "bold",
+                          ^.onMouseMove --> (
+                            if(highlightedVerbIndex.get == Some(verbIndex)) {
+                              Callback.empty
+                            } else highlightedVerbIndex.set(Some(verbIndex))
+                          ),
+                          ^.onMouseOut --> highlightedVerbIndex.set(None),
+                        )
+                      )
                     )
                 }
               )
@@ -752,20 +839,21 @@ object Browser {
             sentBoxRefOpt.fold(<.div()) { sentenceBoxRef =>
               val rect = sentenceBoxRef.getBoundingClientRect
               val height = math.round(rect.height)
-                <.div(S.verbEntriesContainer)(
-                  ^.paddingTop := s"${height}px",
-                  sentence.verbEntries.values.toList.sortBy(_.verbIndex).toVdomArray { verb =>
-                    verbEntryDisplay(sentence, verb, slices, validOnly, verbColorMap(verb.verbIndex))(
-                      ^.key := verb.verbIndex,
-                      ^.onMouseMove --> (
-                        if(highlightedVerbIndex.get == Some(verb.verbIndex)) {
-                          Callback.empty
-                        } else highlightedVerbIndex.set(Some(verb.verbIndex))
-                      ),
-                      ^.onMouseOut --> highlightedVerbIndex.set(None)
-                    )
-                  }
-                )
+
+              <.div(S.verbEntriesContainer)(
+                ^.paddingTop := s"${height}px",
+                sentence.verbEntries.values.toList.sortBy(_.verbIndex).toVdomArray { verb =>
+                  verbEntryDisplay(sentence, verb, slices, validOnly, verbColorMap(verb.verbIndex), height.toInt)(
+                    ^.key := verb.verbIndex,
+                    ^.onMouseMove --> (
+                      if(highlightedVerbIndex.get == Some(verb.verbIndex)) {
+                        Callback.empty
+                      } else highlightedVerbIndex.set(Some(verb.verbIndex))
+                    ),
+                    ^.onMouseOut --> highlightedVerbIndex.set(None)
+                  )
+                }
+              )
             }
           )
       }
