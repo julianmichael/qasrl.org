@@ -26,10 +26,8 @@ val scalajsScalaCSSVersion = "0.5.3"
 
 // workaround for source project dependency
 import $file.lib.sitegen.{build => SitegenBuild}
-object sitegen extends SitegenBuild.SitegenTrait {
-  def sources = T.sources {
-    build.millSourcePath / 'lib / 'sitegen / 'sitegen / 'src
-  }
+object sitegen extends SitegenBuild.SitegenModule {
+  def millSourcePath = build.millSourcePath / "lib" / "sitegen" / "sitegen"
 }
 
 trait CommonModule extends ScalaModule {
@@ -72,7 +70,7 @@ trait JsPlatform extends CrossPlatformModule with ScalaJSModule {
 import $file.lib.sitegen.scripts.ScalatexBuild
 object `qasrl-site` extends CommonMainModule with ScalatexBuild.ScalatexModule {
 
-  def moduleDeps = Seq(sitegen)
+  def moduleDeps = Seq(sitegen.jvm)
 
   def ivyDeps = super.ivyDeps() ++ Agg(
     ivy"com.lihaoyi::ammonite-ops:1.1.2"
