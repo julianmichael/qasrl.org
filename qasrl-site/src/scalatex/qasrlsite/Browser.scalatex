@@ -2,7 +2,7 @@
 
 @import sitegen.render
 @import sitegen.render.{Styles => S}
-@import sitegen.render.{LocalLinks => L}
+@import sitegen.render.{CDNLinks => L}
 @import sitegen.data
 @import scalacss.ScalatagsCss._
 @import scalacss.DevDefaults._

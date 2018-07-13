@@ -50,7 +50,11 @@ object WebServerMain extends StreamApp[IO] {
       }
     }
 
-    val service = HttpDocumentService.makeService(index, docs, searchIndex)
+    val bareService = HttpDocumentService.makeService(index, docs, searchIndex)
+
+    import org.http4s.server.middleware._
+
+    val service = CORS(bareService)
 
     BlazeBuilder[IO]
       .bindHttp(8080, "localhost")
