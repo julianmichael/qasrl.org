@@ -171,23 +171,28 @@ object Browser {
   )
 
   def searchPane(search: StateVal[Search]) = {
+    val query = search.get.text.split("\\s+")
+      .map(_.trim).toSet
+      .filter(_.nonEmpty)
+      .map((s: String) => s.lowerCase)
     <.div(S.searchContainer)(
       <.input(S.searchInput)(
         ^.`type` := "text",
-        ^.placeholder := "Keyword search",
+        ^.placeholder := "Keyword search (sentences)",
         ^.value := search.get.text,
         ^.onChange ==> ((e: ReactEventFromInput) => search.zoom(Search.text).set(e.target.value)),
         ^.onKeyDown ==> (
           (e: ReactKeyboardEvent) => {
-            val query = search.get.text.split("\\s+")
-              .map(_.trim).toSet
-              .filter(_.nonEmpty)
-              .map((s: String) => s.lowerCase)
             CallbackOption.keyCodeSwitch(e) {
               case KeyCode.Enter => search.zoom(Search.query).set(query)
             }
           }
         )
+      ),
+      <.button(S.searchSubmitButton)(
+        ^.disabled := !search.get.query.isEmpty,
+        ^.onClick --> search.zoom(Search.query).set(query),
+        "Submit"
       ),
       <.button(S.searchClearButton)(
         ^.disabled := search.get.query.isEmpty,
@@ -236,7 +241,7 @@ object Browser {
       <.div(S.helpModalDialog, ^.role := "document")(
         <.div(S.helpModalContent)(
           <.div(S.helpModalHeader)(
-            <.h2(S.helpModalTitle)(
+            <.h1(S.helpModalTitle)(
               ^.id := helpModalLabelId,
               "QA-SRL Bank 2.0 Browser"
             ),
@@ -260,7 +265,7 @@ object Browser {
               "If the interface seems laid out wrong, try zooming out in your browser (e.g., cmd+minus on Chrome on Mac) ",
               "or widening your browser window. "
             ),
-            <.h3("About the Data"),
+            <.h4("About the Data"),
             <.p(
               "QA-SRL reframes the traditional problem of Semantic Role Labeling into one of writing questions and answers. ",
               "The questions are taken from a restrictive template centered around the verb being targeted as the predicate, ",
@@ -302,7 +307,7 @@ object Browser {
               "Since workers could mark questions as invalid, our convention is to count a question as valid if at least ",
               "5/6 of its questions are valid — so all 3, in the case of 3 answers, or 5 out of 6 in the case of 6."
             ),
-            <.h3("Filters"),
+            <.h4("Filters"),
             <.ul(
               <.li(
                 <.b("Train / Dev: "),
@@ -324,19 +329,21 @@ object Browser {
                 <.b("Valid only: "),
                 "Filter out questions that would be counted invalid by our heuristic, based on the set of answers included ",
                 "according to the current filters. ",
-              ),
+              )
+            ),
+            <.p(
               "See ",
               <.a(^.href := "#", "the paper "),
               "for more details. "
             ),
-            <.h3("Keyword Search"),
+            <.h4("Keyword Search"),
             <.p(
               "You may search the dataset for specific words by typing a query in the Keyword Search field and pressing enter. ",
               "The interface will then show only documents and sentences containing that word. ",
               "This does not search through document titles (use cmd+F or ctrl+F for that), ",
               "is case-insensitive, and matches verbs that are inflected differently. "
             ),
-            <.h3("Data Display"),
+            <.h4("Data Display"),
             <.p(
               "When a sentence is selected, all answer spans admitted by the current filters ",
               "will be highlighted in that sentence in the main display. ",
@@ -426,7 +433,7 @@ object Browser {
   def headerPane(state: StateVal[State]) = {
     <.div(S.headerContainer)(
       <.div(S.titleAndSearchContainer)(
-        <.h1(S.title)("QA-SRL Bank 2.0"),
+        <.h1(S.title)("QA-SRL Bank 2.0 Browser"),
         searchPane(state.zoom(State.search))
       ),
       filterPane(state.zoom(State.filter)),
@@ -728,8 +735,8 @@ object Browser {
     verb: VerbEntry,
     slices: Slices,
     validOnly: Boolean,
-    color: Rgba,
-    anchorCorrectionPixels: Int
+    color: Rgba
+    // anchorCorrectionPixels: Int
   ) = {
     <.div(S.verbEntryDisplay)(
       <.div(
@@ -737,7 +744,7 @@ object Browser {
           ^.name := s"verb-${verb.verbIndex}",
           ^.display := "block",
           ^.position := "relative",
-          ^.top := s"-${anchorCorrectionPixels}px",
+          // ^.top := s"-${anchorCorrectionPixels}px",
           ^.visibility := "hidden"
         )
       ),
@@ -773,6 +780,69 @@ object Browser {
     )
   }
 
+  def docSelectionPane(
+    totalNumDocs: Int,
+    curDocMetas: SortedSet[DocumentMetadata],
+    curDocMeta: StateVal[DocumentMetadata]
+  ) = {
+    <.div(S.documentSelectionPaneContainer)(
+      <.div(S.documentCountLabel)(
+        <.span(S.documentCountLabelText)(
+          s"${curDocMetas.size} / $totalNumDocs documents"
+        )
+      ),
+      <.div(S.documentSelectionPane)(
+        curDocMetas.toVdomArray { docMeta =>
+          <.div(S.documentSelectionEntry)(
+            ^.key := docMeta.id.toString,
+            if(docMeta == curDocMeta.get) S.currentSelectionEntry else S.nonCurrentSelectionEntry,
+            ^.onClick --> curDocMeta.set(docMeta),
+            <.span(S.documentSelectionEntryText)(
+              docMeta.title
+            )
+          )
+        }
+      )
+    )
+  }
+
+  def sentenceSelectionPane(
+    numSentencesInDocument: Int,
+    curSentences: SortedSet[Sentence],
+    searchQuery: Set[LowerCaseString],
+    curSentence: StateVal[Sentence]
+  ) = {
+    val sentencesWord = if(numSentencesInDocument == 1) "sentence" else "sentences"
+    val sentenceCountLabel = if(curSentences.size == numSentencesInDocument) {
+      s"$numSentencesInDocument $sentencesWord"
+    } else {
+      s"${curSentences.size} / $numSentencesInDocument $sentencesWord"
+    }
+
+    <.div(S.sentenceSelectionPaneContainer)(
+      <.div(S.sentenceCountLabel)(
+        <.span(S.sentenceCountLabelText)(
+          sentenceCountLabel
+        )
+      ),
+      <.div(S.sentenceSelectionPane)(
+        curSentences.toVdomArray { sentence =>
+          val spanHighlights = qasrl.bank.service.getQueryMatchesInSentence(sentence, searchQuery).toList.map(index =>
+            AnswerSpan(index, index + 1) -> queryKeywordHighlightLayer
+          )
+          <.div(S.sentenceSelectionEntry)(
+            ^.key := sentence.sentenceId,
+            if(sentence == curSentence.get) S.currentSelectionEntry else S.nonCurrentSelectionEntry,
+            ^.onClick --> curSentence.set(sentence),
+            <.span(S.sentenceSelectionEntryText)(
+              renderSentenceWithHighlights(sentence.sentenceTokens, RenderWholeSentence(spanHighlights))
+            )
+          )
+        }
+      )
+    )
+  }
+
   def sentenceDisplayPane(
     part: DatasetPartition,
     docMeta: DocumentMetadata,
@@ -797,131 +867,56 @@ object Browser {
         .zipWithIndex.map { case (verb, index) =>
           verb.verbIndex -> highlightLayerColors(index % highlightLayerColors.size)
       }.toMap
-      DivReference.make(
-        <.div(S.sentenceBox)(
-          <.div(S.sentenceInfoContainer)(
-            <.span(S.sentenceInfoText) {
-              val abbrevTitle = if(docMeta.title.length <= 30) docMeta.title else docMeta.title.take(27) + "..."
-              s"$part / ${docMeta.id.domain} / ${docMeta.id.id} ($abbrevTitle) / paragraph ${sentenceId.paragraphNum}, sentence ${sentenceId.sentenceNum}"
-            }
-          ),
-          <.div(S.sentenceTextContainer)(
-            <.span(S.sentenceText)(
-              renderSentenceWithHighlights(
-                sentence.sentenceTokens,
-                RenderWholeSentence(answerSpansWithColors),
-                verbColorMap.collect {
-                  case (verbIndex, color) if highlightedVerbIndex.get.forall(_ == verbIndex) =>
-                    verbIndex -> (
-                      (v: VdomTag) => <.a(
-                        S.verbAnchorLink,
-                        ^.href := s"#verb-$verbIndex",
-                        v(
-                          ^.color := color.copy(a = 1.0).toColorStyleString,
-                          ^.fontWeight := "bold",
-                          ^.onMouseMove --> (
-                            if(highlightedVerbIndex.get == Some(verbIndex)) {
-                              Callback.empty
-                            } else highlightedVerbIndex.set(Some(verbIndex))
-                          ),
-                          ^.onMouseOut --> highlightedVerbIndex.set(None),
-                        )
-                      )
+
+      <.div(S.sentenceDisplayPane)(
+        <.div(S.sentenceInfoContainer)(
+          <.span(S.sentenceInfoText) {
+            val abbrevTitle = if(docMeta.title.length <= 30) docMeta.title else docMeta.title.take(27) + "..."
+            s"$part / ${docMeta.id.domain} / ${docMeta.id.id} ($abbrevTitle) / paragraph ${sentenceId.paragraphNum}, sentence ${sentenceId.sentenceNum}"
+          }
+        ),
+        <.div(S.sentenceTextContainer)(
+          <.span(S.sentenceText)(
+            renderSentenceWithHighlights(
+              sentence.sentenceTokens,
+              RenderWholeSentence(answerSpansWithColors),
+              verbColorMap.collect { case (verbIndex, color) =>
+                verbIndex -> (
+                  (v: VdomTag) => <.a(
+                    S.verbAnchorLink,
+                    ^.href := s"#verb-$verbIndex",
+                    v(
+                      ^.color := color.copy(a = 1.0).toColorStyleString,
+                      ^.fontWeight := "bold",
+                      ^.onMouseMove --> (
+                        if(highlightedVerbIndex.get == Some(verbIndex)) {
+                          Callback.empty
+                        } else highlightedVerbIndex.set(Some(verbIndex))
+                      ),
+                      ^.onMouseOut --> highlightedVerbIndex.set(None)
                     )
-                }
-              )
-            )
-          )
-        )
-      ) { case (sentBox, sentBoxRefOpt) =>
-          <.div(S.sentenceDisplayPane)(
-            sentBox,
-            sentBoxRefOpt.fold(<.div()) { sentenceBoxRef =>
-              val rect = sentenceBoxRef.getBoundingClientRect
-              val height = math.round(rect.height)
-
-              <.div(S.verbEntriesContainer)(
-                ^.paddingTop := s"${height}px",
-                sentence.verbEntries.values.toList.sortBy(_.verbIndex).toVdomArray { verb =>
-                  verbEntryDisplay(sentence, verb, slices, validOnly, verbColorMap(verb.verbIndex), height.toInt)(
-                    ^.key := verb.verbIndex,
-                    ^.onMouseMove --> (
-                      if(highlightedVerbIndex.get == Some(verb.verbIndex)) {
-                        Callback.empty
-                      } else highlightedVerbIndex.set(Some(verb.verbIndex))
-                    ),
-                    ^.onMouseOut --> highlightedVerbIndex.set(None)
                   )
-                }
-              )
-            }
-          )
-      }
-    }
-  }
-
-  def sentenceSelectionPane(
-    numSentencesInDocument: Int,
-    curSentences: SortedSet[Sentence],
-    searchQuery: Set[LowerCaseString],
-    curSentence: StateVal[Sentence]
-  ) = {
-    val sentencesWord = if(numSentencesInDocument == 1) "sentence" else "sentences"
-    val sentenceCountLabel = if(curSentences.size == numSentencesInDocument) {
-      s"$numSentencesInDocument $sentencesWord"
-    } else {
-      s"${curSentences.size} / $numSentencesInDocument $sentencesWord"
-    }
-
-    <.div(S.scrollPane)(
-      <.div(S.sentenceCountLabel)(
-        <.span(S.sentenceCountLabelText)(
-          sentenceCountLabel
-        )
-      ),
-      <.div(S.sentenceSelectionPane)(
-        curSentences.toVdomArray { sentence =>
-          val spanHighlights = qasrl.bank.service.getQueryMatchesInSentence(sentence, searchQuery).toList.map(index =>
-            AnswerSpan(index, index + 1) -> queryKeywordHighlightLayer
-          )
-          <.div(S.sentenceSelectionEntry)(
-            ^.key := sentence.sentenceId,
-            if(sentence == curSentence.get) S.currentSelectionEntry else S.nonCurrentSelectionEntry,
-            ^.onClick --> curSentence.set(sentence),
-            <.span(S.sentenceSelectionEntryText)(
-              renderSentenceWithHighlights(sentence.sentenceTokens, RenderWholeSentence(spanHighlights))
+                )
+              }
             )
           )
-        }
-      )
-    )
-  }
-
-  def docSelectionPane(
-    totalNumDocs: Int,
-    curDocMetas: SortedSet[DocumentMetadata],
-    curDocMeta: StateVal[DocumentMetadata]
-  ) = {
-    <.div(
-      S.scrollPane,
-      <.div(S.documentCountLabel)(
-        <.span(S.documentCountLabelText)(
-          s"${curDocMetas.size} / $totalNumDocs documents"
-        )
-      ),
-      <.div(S.documentSelectionPane)(
-        curDocMetas.toVdomArray { docMeta =>
-          <.div(S.documentSelectionEntry)(
-            ^.key := docMeta.id.toString,
-            if(docMeta == curDocMeta.get) S.currentSelectionEntry else S.nonCurrentSelectionEntry,
-            ^.onClick --> curDocMeta.set(docMeta),
-            <.span(S.documentSelectionEntryText)(
-              docMeta.title
+        ),
+        <.div(S.verbEntriesContainer)(
+          sentence.verbEntries.values.toList.sortBy(_.verbIndex).toVdomArray { verb =>
+            verbEntryDisplay(sentence, verb, slices, validOnly, verbColorMap(verb.verbIndex))(
+              S.hoverHighlightedVerbTable.when(highlightedVerbIndex.get.exists(_ == verb.verbIndex)),
+              ^.key := verb.verbIndex,
+              ^.onMouseMove --> (
+                if(highlightedVerbIndex.get == Some(verb.verbIndex)) {
+                  Callback.empty
+                } else highlightedVerbIndex.set(Some(verb.verbIndex))
+              ),
+              ^.onMouseOut --> highlightedVerbIndex.set(None)
             )
-          )
-        }
+          }
+        )
       )
-    )
+    }
   }
 
   val S = BrowserStyles

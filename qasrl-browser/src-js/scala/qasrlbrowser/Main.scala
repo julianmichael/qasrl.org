@@ -28,7 +28,7 @@ object Main {
     // println("Data meta index loaded.")
 
     import qasrl.bank.service.WebClientDocumentService
-    val dataService = new WebClientDocumentService("http://localhost:8080")
+    val dataService = new WebClientDocumentService("http://nlp.cs.washington.edu:8080")
 
     Browser.Component(Browser.Props(dataService)).renderIntoDOM(
       dom.document.getElementById("browser")

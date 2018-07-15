@@ -6,6 +6,39 @@ import scala.language.postfixOps
 object BrowserStyles extends StyleSheet.Inline {
   import dsl._
 
+  // color scheme
+
+  val headerBackgroundColor = grey(240)
+  val headerContentColor = black
+
+  val selectedHighlightColor = grey(200)
+  val hoverHighlightColor = grey(240)
+  val alternatingRowBackgroundColor1 = white
+  val alternatingRowBackgroundColor2 = grey(240)
+
+  val originalRoundIndicatorColor = grey(200)
+  val expansionRoundIndicatorColor = rgba(  64, 192,   0, 1.0)
+  val evalRoundIndicatorColor = orange
+
+  val metadataLabelBackgroundColor = grey(240)
+
+  val validTextColor = green
+  val invalidTextColor = red
+
+  val paneDivisionBorderWidth = 1 px
+  val paneDivisionBorderColor = metadataLabelBackgroundColor
+
+  val sentenceSelectionPaneBorder = style(
+    borderLeftColor(paneDivisionBorderColor),
+    borderRightColor(paneDivisionBorderColor),
+    borderLeftStyle.solid,
+    borderRightStyle.solid,
+    borderLeftWidth(paneDivisionBorderWidth),
+    borderRightWidth(paneDivisionBorderWidth)
+  )
+
+  // styles
+
   val checkbox = style(
     addClassNames("form-check-input")
   )
@@ -29,8 +62,8 @@ object BrowserStyles extends StyleSheet.Inline {
 
   val flexyHeaderThing = style(
     display.flex,
-    // alignItems.center,
-    // justifyContent.center,
+    flexDirection.row,
+    flexWrap.nowrap,
     position.relative,
     zIndex(10)
   )
@@ -38,14 +71,20 @@ object BrowserStyles extends StyleSheet.Inline {
   val headerContainer = style(
     addClassNames("p-2"),
     flexyHeaderThing,
-    height(headerHeight)
+    alignItems.center,
+    height(headerHeight),
+    backgroundColor(headerBackgroundColor),
+    color(headerContentColor),
   )
 
   val titleAndSearchContainer = style()
 
   // title
 
-  val title = style()
+  val title = style(
+    whiteSpace.nowrap,
+    overflow.hidden
+  )
 
   // search
 
@@ -54,7 +93,10 @@ object BrowserStyles extends StyleSheet.Inline {
     width(100 %%)
   )
 
-  val searchInput = style()
+  val searchInput = style(
+    flex := "1"
+  )
+  val searchSubmitButton = style()
   val searchClearButton = style()
 
   // filters
@@ -65,7 +107,7 @@ object BrowserStyles extends StyleSheet.Inline {
   )
 
   val filterChooser = style(
-    addClassNames("form-check", "px-3")
+    addClassNames("form-check", "pl-5")
   )
 
   val partitionChooser = style(
@@ -82,7 +124,10 @@ object BrowserStyles extends StyleSheet.Inline {
 
   // legend
 
-  val legendContainer = style()
+  val legendContainer = style(
+    addClassNames("pt-1"),
+    minWidth(350 px)
+  )
 
   val legendTitle = style()
 
@@ -164,18 +209,15 @@ object BrowserStyles extends StyleSheet.Inline {
   val metadataLabelFontSize = 8 pt
 
   val metadataLabel = style(
+    display.block,
     height(metadataLabelHeight),
-    backgroundColor.white,
+    backgroundColor(metadataLabelBackgroundColor),
     fontSize(metadataLabelFontSize),
     verticalAlign.middle
   )
   val metadataLabelText = style(
     addClassNames("px-1"),
     whiteSpace.nowrap
-  )
-  val fixedPaneHeader = style(
-    position.fixed,
-    top(headerHeight)
   )
 
   val documentSelectionPaneWidth = 10 rem
@@ -184,15 +226,22 @@ object BrowserStyles extends StyleSheet.Inline {
   val documentSelectionFontSize = 12 pt
   val sentenceSelectionFontSize = 10 pt
 
+  val contentPaneContainer = style(
+    position.relative,
+    overflow.hidden,
+    backfaceVisibility.hidden,
+    willChange := "overflow",
+    display.flex,
+    flexDirection.column
+  )
+
   val selectionPane = style(
     scrollPane,
-    paddingTop(metadataLabelHeight),
     lineHeight(1.2)
   )
 
   val countLabel = style(
     metadataLabel,
-    fixedPaneHeader,
     textAlign.right
   )
   val countLabelText = style(
@@ -202,22 +251,26 @@ object BrowserStyles extends StyleSheet.Inline {
   val selectionEntry = style(
     addClassNames("p-2"),
     &.hover(
-      backgroundColor(grey(220))
+      backgroundColor(hoverHighlightColor)
     )
   )
 
   val currentSelectionEntry = style(
     selectionEntry,
-    backgroundColor(grey(200))
+    backgroundColor(selectedHighlightColor).important
   )
 
   val nonCurrentSelectionEntry = style(
     selectionEntry
   )
 
+  val documentSelectionPaneContainer = style(
+    contentPaneContainer,
+    width(documentSelectionPaneWidth),
+  )
+
   val documentCountLabel = style(
-    countLabel,
-    width(documentSelectionPaneWidth)
+    countLabel
   )
 
   val documentCountLabelText = style(
@@ -226,7 +279,7 @@ object BrowserStyles extends StyleSheet.Inline {
 
   val documentSelectionPane = style(
     selectionPane,
-    width(documentSelectionPaneWidth)
+    width(100 %%)
   )
 
   val documentSelectionEntry = style(
@@ -237,10 +290,14 @@ object BrowserStyles extends StyleSheet.Inline {
     fontSize(documentSelectionFontSize)
   )
 
-  val sentenceCountLabel = style(
-    countLabel,
-    left(documentSelectionPaneWidth),
+  val sentenceSelectionPaneContainer = style(
+    contentPaneContainer,
+    sentenceSelectionPaneBorder,
     width(sentenceSelectionPaneWidth)
+  )
+
+  val sentenceCountLabel = style(
+    countLabel
   )
 
   val sentenceCountLabelText = style(
@@ -249,11 +306,10 @@ object BrowserStyles extends StyleSheet.Inline {
 
   val sentenceSelectionPane = style(
     selectionPane,
-    width(sentenceSelectionPaneWidth)
   )
 
   val sentenceSelectionEntry = style(
-    selectionEntry
+    selectionEntry,
   )
 
   val sentenceSelectionEntryText = style(
@@ -265,6 +321,7 @@ object BrowserStyles extends StyleSheet.Inline {
   val documentContainer = style(
     flex := "1",
     display.flex,
+    flexDirection.row,
     overflow.hidden,
     position.relative,
     backfaceVisibility.hidden,
@@ -274,18 +331,12 @@ object BrowserStyles extends StyleSheet.Inline {
   // display of sentence data
 
   val sentenceDisplayPane = style(
-    fontSize(12 pt),
-    scrollPane,
-    addClassNames("px-3"),
+    contentPaneContainer,
     flex := "1"
   )
 
-  val sentenceBox = style(
-    fixedPaneHeader,
-    backgroundColor.white
-  )
-
   val sentenceInfoContainer = style(
+    addClassNames("pl-2"),
     metadataLabel,
     textAlign.left
   )
@@ -294,7 +345,7 @@ object BrowserStyles extends StyleSheet.Inline {
   )
 
   val sentenceTextContainer = style(
-    addClassNames("pb-3"),
+    addClassNames("p-3"),
   )
 
   val verbAnchorLink = style(
@@ -303,7 +354,10 @@ object BrowserStyles extends StyleSheet.Inline {
     )
   )
 
-  val verbEntriesContainer = style()
+  val verbEntriesContainer = style(
+    scrollPane,
+    flex := "1"
+  )
 
   val loadingNotice = style(
     addClassNames("p-3")
@@ -314,26 +368,37 @@ object BrowserStyles extends StyleSheet.Inline {
   )
 
   val verbEntryDisplay = style(
-    addClassNames("p-2"),
+    addClassNames("px-4", "pb-4"),
     width(100 %%)
   )
 
   val verbHeading = style()
+
   val verbHeadingText = style(
     fontSize(16 pt),
     fontWeight.bold
   )
+
   val verbQAsTable = style(
     width(100 %%)
   )
+
   val verbQAsTableBody = style(
     width(100 %%)
   )
+
+  val hoverHighlightedVerbTable = style(
+    backgroundColor(hoverHighlightColor)
+  )
+
   val qaPairRow = style(
     addClassNames("p-1"),
     width(100 %%),
+    &.nthChild("odd")(
+      backgroundColor(alternatingRowBackgroundColor1)
+    ),
     &.nthChild("even")(
-      backgroundColor(grey(240))
+      backgroundColor(alternatingRowBackgroundColor2)
     )
   )
 
@@ -341,17 +406,20 @@ object BrowserStyles extends StyleSheet.Inline {
     width(0.2 rem),
     height(100 %%)
   )
+
   val originalRoundIndicator = style(
     roundIndicator,
-    backgroundColor(grey(220))
+    backgroundColor(originalRoundIndicatorColor)
   )
+
   val expansionRoundIndicator = style(
     roundIndicator,
-    backgroundColor(rgba(  64, 192,   0, 1.0))
+    backgroundColor(expansionRoundIndicatorColor)
   )
+
   val evalRoundIndicator = style(
     roundIndicator,
-    backgroundColor.orange
+    backgroundColor(evalRoundIndicatorColor)
   )
 
   // detour to legend real quick
@@ -396,11 +464,11 @@ object BrowserStyles extends StyleSheet.Inline {
   val validityText = style()
   val validValidityText = style(
     validityText,
-    color.green
+    color(validTextColor)
   )
   val invalidValidityText = style(
     validityText,
-    color.red
+    color(invalidTextColor)
   )
 
   val answerCell = style()
