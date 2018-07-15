@@ -53,13 +53,21 @@ object WebServerMain extends StreamApp[IO] {
     val bareService = HttpDocumentService.makeService(index, docs, searchIndex)
 
     import org.http4s.server.middleware._
+    import scala.concurrent.duration._
 
-    val service = CORS(bareService)
+    val corsConfig = CORSConfig(
+      anyOrigin = false,
+      allowedOrigins = Set("qasrl.org"),
+      anyMethod = false,
+      allowedMethods = Some(Set("GET")),
+      allowCredentials = false,
+      maxAge = 1.day.toSeconds)
+
+    val service = CORS(bareService, corsConfig)
 
     BlazeBuilder[IO]
-      .bindHttp(8080, "localhost")
+      .bindHttp(8080, "0.0.0.0")
       .mountService(service, "/")
-      .mountService(StaticSiteService.service, "/")
       .serve
   }
 }
