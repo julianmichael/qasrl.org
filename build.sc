@@ -182,10 +182,10 @@ object `qasrl-browser` extends Module {
       ivy"com.github.japgolly.scalacss::ext-react::$scalajsScalaCSSVersion"
     )
 
-    // def jsDeps = Agg(
-    //   "https://cdnjs.cloudflare.com/ajax/libs/react/15.6.1/react.js",
-    //   "https://cdnjs.cloudflare.com/ajax/libs/react/15.6.1/react-dom.js"
-    // )
+    def jsDeps = Agg(
+      "https://cdnjs.cloudflare.com/ajax/libs/react/15.6.1/react.js",
+      "https://cdnjs.cloudflare.com/ajax/libs/react/15.6.1/react-dom.js"
+    )
   }
 }
 

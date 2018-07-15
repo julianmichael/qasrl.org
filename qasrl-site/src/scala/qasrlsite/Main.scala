@@ -14,12 +14,14 @@ object Main extends App {
   val pathToBrowserJSOpt = Option(args(0)).filter(_.nonEmpty).map(Path(_))
   val pathToBrowserJSDepsOpt = Option(args(1)).filter(_.nonEmpty).map(Path(_))
 
-  val siteRoot = pwd / "site"
+  val siteRoot = pwd / "site" / "qasrl.org"
+  val browserRoot = pwd / "site" / "browse.qasrl.org"
 
   val htmlFiles: Map[Frag, Path] = Map(
     Index() -> siteRoot / "index.html",
     Error() -> siteRoot / "error.html",
-    Browser() -> siteRoot / "browser.html",
+    Browser() -> browserRoot / "index.html",
+    Error() -> browserRoot / "error.html"
   )
 
   htmlFiles.foreach { case (html, path) =>
@@ -27,17 +29,17 @@ object Main extends App {
     System.out.println(s"Wrote ${path.relativeTo(pwd)}")
   }
   pathToBrowserJSOpt.filter(exists!).foreach { pathToBrowserJS =>
-    cp.over(pathToBrowserJS, siteRoot / browserScriptLocation)
+    cp.over(pathToBrowserJS, browserRoot / browserScriptLocation)
     System.out.println(
       s"Copied ${pathToBrowserJS.relativeTo(pwd)} " +
-        s"to ${(siteRoot / browserScriptLocation).relativeTo(pwd)}"
+        s"to ${(browserRoot / browserScriptLocation).relativeTo(pwd)}"
     )
   }
   pathToBrowserJSDepsOpt.filter(exists!).foreach { pathToBrowserJSDeps =>
-    cp.over(pathToBrowserJSDeps, siteRoot / browserScriptDepsLocation)
+    cp.over(pathToBrowserJSDeps, browserRoot / browserScriptDepsLocation)
     System.out.println(
       s"Copied ${pathToBrowserJSDeps.relativeTo(pwd)} " +
-        s"to ${(siteRoot / browserScriptDepsLocation).relativeTo(pwd)}"
+        s"to ${(browserRoot / browserScriptDepsLocation).relativeTo(pwd)}"
     )
   }
 }

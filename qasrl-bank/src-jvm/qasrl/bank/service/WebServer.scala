@@ -57,7 +57,7 @@ object WebServerMain extends StreamApp[IO] {
 
     val corsConfig = CORSConfig(
       anyOrigin = false,
-      allowedOrigins = Set("http://qasrl.org"),
+      allowedOrigins = Set("http://browse.qasrl.org"),
       anyMethod = false,
       allowedMethods = Some(Set("GET")),
       allowCredentials = false,

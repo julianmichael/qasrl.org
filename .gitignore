@@ -1,5 +1,6 @@
 out
-site/index.html
-site/error.html
-site/browser.html
-site/scripts/*
+site/qasrl.org/index.html
+site/qasrl.org/error.html
+site/browse.qasrl.org/index.html
+site/browse.qasrl.org/error.html
+site/browse.qasrl.org/scripts/*
