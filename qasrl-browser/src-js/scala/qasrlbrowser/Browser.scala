@@ -332,8 +332,11 @@ object Browser {
               )
             ),
             <.p(
+              "The questions introduced in the expansion and eval stages are very often ungrammatical or invalid, ",
+              "because they were produced by ", <.i("overgenerating "), "questions from our models. ",
+              "Questions were included which were assigned probabilities as low as 0.2. ",
               "See ",
-              <.a(^.href := "#", "the paper "),
+              <.a(^.href := "https://arxiv.org/pdf/1805.05377.pdf", "the paper "),
               "for more details. "
             ),
             <.h4("Keyword Search"),
