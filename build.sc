@@ -42,6 +42,9 @@ trait CommonModule extends ScalaModule {
     ivy"org.scalamacros:::paradise:$macroParadiseVersion",
     ivy"org.spire-math::kind-projector:$kindProjectorVersion"
   )
+  def repositories = super.repositories ++ Seq(
+    MavenRepository("https://oss.sonatype.org/content/repositories/snapshots")
+  )
 }
 
 trait CommonMainModule extends CommonModule {
