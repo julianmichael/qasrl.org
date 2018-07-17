@@ -5,6 +5,9 @@
 @import sitegen.data.References._
 
 @li
+  You can now
+  @a(href := "http://browse.qasrl.org"){browse the QA-SRL Bank 2.0 dataset online}!
+@li
   We have released the first large-scale QA-SRL
   @a(href := "https://github.com/uwnlp/qasrl-bank"){dataset} and
   high-quality @a(href := "https://github.com/nafitzgerald/nrl-qasrl"){model}!

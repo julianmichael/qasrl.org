@@ -178,7 +178,7 @@ object Browser {
     <.div(S.searchContainer)(
       <.input(S.searchInput)(
         ^.`type` := "text",
-        ^.placeholder := "Keyword search (sentences)",
+        ^.placeholder := "Search sentences",
         ^.value := search.get.text,
         ^.onChange ==> ((e: ReactEventFromInput) => search.zoom(Search.text).set(e.target.value)),
         ^.onKeyDown ==> (
@@ -436,7 +436,7 @@ object Browser {
   def headerPane(state: StateVal[State]) = {
     <.div(S.headerContainer)(
       <.div(S.titleAndSearchContainer)(
-        <.h1(S.title)("QA-SRL Bank 2.0 Browser"),
+        <.h1(S.title)("QA-SRL Bank 2.0"),
         searchPane(state.zoom(State.search))
       ),
       filterPane(state.zoom(State.filter)),
@@ -997,4 +997,5 @@ object Browser {
     .initialStateFromProps((props: Props) => State.initial(props))
     .renderBackend[Backend]
     .build
+
 }

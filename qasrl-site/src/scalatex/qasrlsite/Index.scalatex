@@ -48,10 +48,12 @@
         @h1{Introducing QA-SRL Bank 2.0}
         @p(S.leadText)
           The first large-scale QA-SRL dataset and high-quality parser
+        @a(S.leadButton, S.leadButton0, href := "http://browse.qasrl.org", role := "button")
+          Explore the data »
         @a(S.leadButton, S.leadButton1, href := "http://arxiv.org/abs/1805.05377", role := "button")
           Paper »
         @a(S.leadButton, S.leadButton2, href := "https://github.com/uwnlp/qasrl-bank", role := "button")
-          Dataset »
+          Download »
         @a(S.leadButton, S.leadButton3, href := "https://github.com/nafitzgerald/nrl-qasrl", role := "button")
           Model »
 
