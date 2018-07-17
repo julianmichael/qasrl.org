@@ -197,7 +197,8 @@ trait QasrlBankModule extends CommonMainModule {
     ivy"org.julianmichael::qasrl::$qasrlVersion",
     ivy"org.typelevel::cats-free::$catsVersion",
     ivy"io.circe::circe-core::$circeVersion",
-    ivy"io.circe::circe-generic::$circeVersion"
+    ivy"io.circe::circe-generic::$circeVersion",
+    ivy"io.circe::circe-literal::$circeVersion"
   )
 }
 
@@ -206,10 +207,14 @@ object `qasrl-bank` extends Module {
     def ivyDeps = super.ivyDeps() ++ Agg(
       ivy"org.http4s::http4s-dsl::$http4sVersion",
       ivy"org.http4s::http4s-blaze-server::$http4sVersion",
-      ivy"org.http4s::http4s-circe::$http4sVersion"
+      ivy"org.http4s::http4s-circe::$http4sVersion",
+      ivy"org.http4s::http4s-blaze-client::$http4sVersion"
       // Optional for string interpolation to JSON model
       // "io.circe" %% "circe-literal" % "0.9.3"
     )
+
+    def runBrowserServer() = runMain("qasrl.bank.WebServerMain")
+    def runDemoServer(url: String) = runMain("qasrl.bank.service.DemoServerMain", url)
   }
   object js extends QasrlBankModule with JsPlatform {
     def ivyDeps = super.ivyDeps() ++ Agg(
