@@ -16,29 +16,29 @@ trait DocumentService[M[_]] {
   def searchDocuments(query: Set[LowerCaseString]): M[Set[DocumentId]]
 }
 object DocumentService {
-  sealed trait RequestA[A]
-  case object GetDataIndex extends RequestA[DataIndex]
-  case class GetDocument(id: DocumentId) extends RequestA[Document]
-  case class SearchDocuments(query: Set[LowerCaseString]) extends RequestA[Set[DocumentId]]
+  sealed trait Request[A]
+  case object GetDataIndex extends Request[DataIndex]
+  case class GetDocument(id: DocumentId) extends Request[Document]
+  case class SearchDocuments(query: Set[LowerCaseString]) extends Request[Set[DocumentId]]
 }
 
-object FreeDocumentService extends DocumentService[Free[DocumentService.RequestA, ?]] {
+object FreeDocumentService extends DocumentService[Free[DocumentService.Request, ?]] {
 
   import DocumentService._
 
-  type Request[A] = Free[RequestA, A]
+  type RequestFree[A] = Free[Request, A]
 
-  def getDataIndex: Request[DataIndex] =
-    Free.liftF[RequestA, DataIndex](GetDataIndex)
-  def getDocument(id: DocumentId): Request[Document] =
-    Free.liftF[RequestA, Document](GetDocument(id))
-  def searchDocuments(query: Set[LowerCaseString]): Request[Set[DocumentId]] =
-    Free.liftF[RequestA, Set[DocumentId]](SearchDocuments(query))
+  def getDataIndex: RequestFree[DataIndex] =
+    Free.liftF[Request, DataIndex](GetDataIndex)
+  def getDocument(id: DocumentId): RequestFree[Document] =
+    Free.liftF[Request, Document](GetDocument(id))
+  def searchDocuments(query: Set[LowerCaseString]): RequestFree[Set[DocumentId]] =
+    Free.liftF[Request, Set[DocumentId]](SearchDocuments(query))
 }
 
 
 class InterpretedDocumentService[M[_]](
-  interpreter: DocumentService.RequestA ~> M)(
+  interpreter: DocumentService.Request ~> M)(
   implicit M: Monad[M]
 ) extends DocumentService[M] {
 

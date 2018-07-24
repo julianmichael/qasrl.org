@@ -4,8 +4,18 @@ import org.scalajs.dom
 
 import scalacss.DevDefaults._
 
+import scala.concurrent.Future
+
 import qasrl.bank.DataIndex
+import qasrl.bank.Document
+import qasrl.bank.DocumentId
+import radhoc.{CacheCall, Cached, Remote}
+import qasrl.bank.service.DocumentService
+import qasrl.bank.service.WebClientDocumentService
+
 import qasrl.data.Dataset
+
+import nlpdata.util.LowerCaseStrings._
 
 object Main {
   def main(args: Array[String]): Unit = {
@@ -33,30 +43,35 @@ object Main {
       "http://localhost:8080"
     )
 
-    // def makeCallCache = {
-    //   import scala.collection.mutable
-    //   import DocumentService._
-    //   val indexCache = mutable.Map.empty[GetDataIndex.type, Map[GetDataIndex.type, DataIndex]]
-    //   indexCache.put(GetDataIndex, dataIndex)
-    //   val documentCache = 
+    object CachedDataService extends DocumentService[CacheCall] {
+      import scala.concurrent.ExecutionContext.Implicits.global
+      import scala.collection.mutable
+      import DocumentService._
+      val documentCache = mutable.Map.empty[DocumentId, Document]
+      val documentRequestCache = mutable.Map.empty[DocumentId, Future[Document]]
 
-    //   new (RequestA ~> λ[A => mutable.Map[RequestA, A]]) {
-    //     def apply[A](reqA: RequestA[A]) = reqA match {
-    //       case object GetDataIndex =>
-    //       case class GetDocument(id: DocumentId) extends RequestA[Document]
-    //       case class SearchDocuments(query: Set[LowerCaseString]) extends RequestA[Set[DocumentId]]
-    //     }
-    //   }
-    // }
+      def getDataIndex = Cached(dataIndex)
 
-    // def cachifyCalls[F[_]](
-    //   f: (F ~> Future),
-    //   getCache: F ~> λ[A => mutable.Map[RequestA, A]]
-    // ): (F ~> CacheCall) = {
+      def getDocument(id: DocumentId) = {
+        documentCache.get(id).map(Cached(_)).getOrElse {
+          documentRequestCache.get(id).map(Remote(_)).getOrElse {
+            val fut = dataService.getDocument(id)
+            documentRequestCache.put(id, fut)
+            fut.foreach { doc =>
+              documentRequestCache.remove(id)
+              documentCache.put(id, doc)
+            }
+            Remote(fut)
+          }
+        }
+      }
 
-    // }
+      def searchDocuments(query: Set[LowerCaseString]) = Remote (
+        dataService.searchDocuments(query)
+      )
+    }
 
-    Browser.Component(Browser.Props(dataService)).renderIntoDOM(
+    Browser.Component(Browser.Props(CachedDataService)).renderIntoDOM(
       dom.document.getElementById("browser")
     )
   }

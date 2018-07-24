@@ -34,7 +34,6 @@ import qasrl.bank.Domain
 import qasrl.bank.QuestionSource
 import qasrl.bank.SentenceId
 
-import qasrl.bank.service.{CacheCall, Cached, Remote}
 import qasrl.bank.service.DocumentService
 
 import qasrl.data.AnswerLabel
@@ -51,12 +50,14 @@ import nlpdata.util.LowerCaseStrings._
 
 import scala.collection.immutable.SortedSet
 
+import radhoc._
+
 import io.circe._
 
 object Demo {
 
-  val ParseJsonFetch = new CacheCallContentComponent[String, Json]
-  val OptIntLocal = new LocalStateComponent[Option[Int]]
+  val ParseJsonFetch = new CacheCallContent[String, Json]
+  val OptIntLocal = new LocalState[Option[Int]]
 
   val S = DemoStyles
 

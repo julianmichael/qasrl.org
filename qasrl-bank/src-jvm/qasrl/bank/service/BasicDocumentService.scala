@@ -13,9 +13,9 @@ case class BasicDocumentServiceInterpreter(
   index: DataIndex,
   documents: Map[DocumentId, Document],
   searchIndex: Map[LowerCaseString, Set[DocumentId]]
-) extends (DocumentService.RequestA ~> Id) {
+) extends (DocumentService.Request ~> Id) {
   import DocumentService._
-  def apply[A](req: RequestA[A]): A = req match {
+  def apply[A](req: Request[A]): A = req match {
     case GetDataIndex => index
     case GetDocument(id) => documents(id)
     case SearchDocuments(query) =>

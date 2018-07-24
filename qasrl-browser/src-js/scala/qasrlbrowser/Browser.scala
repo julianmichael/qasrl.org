@@ -34,7 +34,6 @@ import qasrl.bank.Domain
 import qasrl.bank.QuestionSource
 import qasrl.bank.SentenceId
 
-import qasrl.bank.service.{CacheCall, Cached, Remote}
 import qasrl.bank.service.DocumentService
 
 import qasrl.data.AnswerLabel
@@ -49,19 +48,21 @@ import qasrl.data.QuestionLabel
 import nlpdata.util.Text
 import nlpdata.util.LowerCaseStrings._
 
+import radhoc._
+
 import scala.collection.immutable.SortedSet
 
 object Browser {
 
-  val IndexFetch = new CacheCallContentComponent[Unit, DataIndex]
-  val SearchFetch = new CacheCallContentComponent[Set[LowerCaseString], Set[DocumentId]]
-  val DocMetaLocal = new LocalStateComponent[DocumentMetadata]
-  val DocFetch = new CacheCallContentComponent[DocumentId, Document]
-  val SentLocal = new LocalStateComponent[Sentence]
+  val IndexFetch = new CacheCallContent[Unit, DataIndex]
+  val SearchFetch = new CacheCallContent[Set[LowerCaseString], Set[DocumentId]]
+  val DocMetaLocal = new LocalState[DocumentMetadata]
+  val DocFetch = new CacheCallContent[DocumentId, Document]
+  val SentLocal = new LocalState[Sentence]
   val DivReference = new ReferenceComponent[html.Div]
-  val BoolLocal = new LocalStateComponent[Boolean]
-  val OptIntLocal = new LocalStateComponent[Option[Int]]
-  val QuestionLabelSetLocal = new LocalStateComponent[Set[QuestionLabel]]
+  val BoolLocal = new LocalState[Boolean]
+  val OptIntLocal = new LocalState[Option[Int]]
+  val QuestionLabelSetLocal = new LocalState[Set[QuestionLabel]]
 
   case class Props(
     qasrl: DocumentService[CacheCall]

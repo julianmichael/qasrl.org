@@ -12,6 +12,7 @@ val kindProjectorVersion = "0.9.4"
 val catsVersion = "1.1.0"
 val nlpdataVersion = "0.2.0-SNAPSHOT"
 val qasrlVersion = "0.1.0-SNAPSHOT"
+val qasrlBankVersion = "0.1.0-SNAPSHOT"
 val radhocVersion = "0.1.0-SNAPSHOT"
 val circeVersion = "0.9.3"
 val http4sVersion = "0.18.14"
@@ -127,14 +128,16 @@ object `qasrl-browser` extends Module {
     // )
   }
   object js extends QASRLBrowserModule with JsPlatform with SimpleJSDepsBuild.SimpleJSDeps /* with ScalatexReactJSModule */ {
-    def moduleDeps = Seq(
-      `qasrl-bank`.js
-    )
+    // def moduleDeps = Seq(
+    //   `qasrl-bank`.js
+    // )
 
     def mainClass = T(Some("qasrlbrowser.Main"))
 
     def ivyDeps = super.ivyDeps() ++ Agg(
       ivy"org.julianmichael::qasrl::$qasrlVersion",
+      ivy"org.julianmichael::qasrl-bank::$qasrlBankVersion",
+      ivy"org.julianmichael::qasrl-bank-service::$qasrlBankVersion",
       ivy"org.julianmichael::nlpdata::$nlpdataVersion",
       ivy"org.julianmichael::radhoc::$radhocVersion",
       ivy"com.github.julien-truffaut::monocle-core::$monocleVersion",
