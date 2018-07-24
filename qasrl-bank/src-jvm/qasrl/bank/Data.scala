@@ -136,7 +136,7 @@ object Data {
 
   def writeIndexJS(path: Path, index: DataIndex) = {
     val printer = io.circe.Printer.noSpaces
-    val res = "var dataIndex = " + printer.pretty(index.asJson) + ";"
+    val res = "var dataMetaIndex = " + printer.pretty(index.asJson) + ";"
     Files.write(path, res.getBytes("UTF-8"))
   }
 

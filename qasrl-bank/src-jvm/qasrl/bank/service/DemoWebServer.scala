@@ -26,7 +26,7 @@ object DemoServerMain extends StreamApp[IO] {
 
     val corsConfig = CORSConfig(
       // anyOrigin = false,
-      // allowedOrigins = Set("http://browse.qasrl.org"),
+      // allowedOrigins = Set("http://demo.qasrl.org"),
       anyOrigin = true,
       anyMethod = false,
       allowedMethods = Some(Set("POST")),

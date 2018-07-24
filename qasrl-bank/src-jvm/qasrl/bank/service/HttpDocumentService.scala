@@ -8,10 +8,6 @@ import cats.effect._
 import org.http4s._
 import org.http4s.implicits._
 
-// import org.http4s.server.blaze._
-// import fs2.{Stream, StreamApp}
-// import fs2.StreamApp.ExitCode
-
 import scala.concurrent.ExecutionContext.Implicits.global
 
 object HttpDocumentService {

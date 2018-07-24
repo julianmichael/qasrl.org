@@ -55,9 +55,10 @@ object WebServerMain extends StreamApp[IO] {
     import org.http4s.server.middleware._
     import scala.concurrent.duration._
 
+    // TODO depend on passed-in config
     val corsConfig = CORSConfig(
-      anyOrigin = false,
-      allowedOrigins = Set("http://browse.qasrl.org"),
+      anyOrigin = true,
+      // allowedOrigins = Set("http://browse.qasrl.org"),
       anyMethod = false,
       allowedMethods = Some(Set("GET")),
       allowCredentials = false,

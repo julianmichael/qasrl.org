@@ -7,6 +7,9 @@ package object qasrlsite {
 
   val browserScriptLocation = RelPath.empty / "scripts" / "browser.js"
   val browserScriptDepsLocation = RelPath.empty / "scripts" / "browser-deps.js"
+  val browserDataIndexLocation = RelPath.empty / "scripts" / "loadDataIndex.js"
+  val demoScriptLocation = RelPath.empty / "scripts" / "demo.js"
+  val demoScriptDepsLocation = RelPath.empty / "scripts" / "demo-deps.js"
 
   val publications = {
     import References._

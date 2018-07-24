@@ -1,7 +1,11 @@
-@package qasrlsite
+@package qasrlbrowser
+
+@import ammonite.ops.Path
+
+@param browserScriptDepsLocation: Path
+@param browserScriptLocation: Path
 
 @import sitegen.render
-@import sitegen.render.{Styles => S}
 @import sitegen.render.{CDNLinks => L}
 @import sitegen.data
 @import scalacss.ScalatagsCss._
@@ -28,6 +32,5 @@
   @body
     @div(id := "browser")
     @L.bootstrapScripts
-    @script(src := browserDataIndexLocation.toString)
     @script(src := browserScriptDepsLocation.toString)
     @script(src := browserScriptLocation.toString)

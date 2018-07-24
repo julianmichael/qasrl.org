@@ -15,3 +15,8 @@ aws s3 sync site/browse.qasrl.org s3://browse.qasrl.org/ \
   --exclude **/.DS_Store \
   --exclude **/.gitignore \
   --profile cse-julian
+
+aws s3 sync site/demo.qasrl.org s3://demo.qasrl.org/ \
+  --exclude **/.DS_Store \
+  --exclude **/.gitignore \
+  --profile cse-julian

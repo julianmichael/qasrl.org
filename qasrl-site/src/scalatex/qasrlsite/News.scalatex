@@ -5,18 +5,21 @@
 @import sitegen.data.References._
 
 @li
+  @render.nameciteAnchor(fitzGerald18qasrl) won an
+  @a(href := "https://twitter.com/nfitz/status/1019460041437401088"){Honourable Mention}
+  at ACL 2018!
+@li
   You can now
-  @a(href := "http://browse.qasrl.org"){browse the QA-SRL Bank 2.0 dataset online}!
+  @a(href := "http://browse.qasrl.org"){browse the QA-SRL Bank 2.0 dataset online},
+  or @a(href := "http://demo.qasrl.org"){try a live demo of our model}!
 @li
   We have released the first large-scale QA-SRL
   @a(href := "https://github.com/uwnlp/qasrl-bank"){dataset} and
   high-quality @a(href := "https://github.com/nafitzgerald/nrl-qasrl"){model}!
   The paper, @render.nameciteAnchor(fitzGerald18qasrl), will appear at ACL 2018.
 @li
-  @render.authorShort(julianMichael) presented
-  @render.nameciteAnchor(michael18qamr)
-  at NAACL 2018 in New Orleans.
-@li
+  @render.authorShort(julianMichael) and
   @render.authorShort(gabiStanovsky) presented
+  @render.nameciteAnchor(michael18qamr) and
   @render.nameciteAnchor(stanovsky18supoie)
   at NAACL 2018 in New Orleans.

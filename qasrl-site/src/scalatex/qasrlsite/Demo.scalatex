@@ -1,7 +1,6 @@
 @package qasrlsite
 
 @import sitegen.render
-@import sitegen.render.{Styles => S}
 @import sitegen.render.{CDNLinks => L}
 @import sitegen.data
 @import scalacss.ScalatagsCss._
@@ -23,11 +22,9 @@
       name := "viewport",
       content := "width=device-width, initial-scale=1, shrink-to-fit=no")
     @L.bootstrapLink
-    @tag("title"){QA-SRL | Browse Data}
-    @S.render(scalatagsStyleTagRenderer, implicitly[scalacss.internal.Env])
+    @tag("title"){QA-SRL | Demo}
   @body
-    @div(id := "browser")
+    @div(id := "demo")
     @L.bootstrapScripts
-    @script(src := browserDataIndexLocation.toString)
-    @script(src := browserScriptDepsLocation.toString)
-    @script(src := browserScriptLocation.toString)
+    @script(src := demoScriptDepsLocation.toString)
+    @script(src := demoScriptLocation.toString)

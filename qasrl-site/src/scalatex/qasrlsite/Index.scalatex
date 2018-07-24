@@ -56,6 +56,8 @@
           Download »
         @a(S.leadButton, S.leadButton3, href := "https://github.com/nafitzgerald/nrl-qasrl", role := "button")
           Model »
+        @a(S.leadButton, S.leadButton0, href := "http://demo.qasrl.org", role := "button")
+          Live Demo »
 
       @sectionHeading("about", "About")(
         "About the\nQA-SRL Project"
@@ -68,7 +70,7 @@
         the @a(href := "https://allenai.org/"){Allen Institute for Artificial Intelligence}.
         Our goal is to advance the state of the art in broad-coverage natural language understanding.
         We believe the way forward is with new datasets that are:
-      @ul
+      @ul(S.list)
         @li
           @b{Crowdsourced}: modern machine learning methods require big training sets, which means
           scalability is a top priority.
@@ -89,7 +91,7 @@
         which have the further advantage of being agnostic to choices of linguistic formalism.
 
       @sectionHeading("news", "News"){News}
-      @ul(News())
+      @ul(S.list)(News())
 
       @sectionHeading("publications", "Publications"){Publications}
       @div(publications.map(render.bibEntry))
