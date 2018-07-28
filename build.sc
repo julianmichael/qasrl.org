@@ -10,10 +10,10 @@ val kindProjectorVersion = "0.9.4"
 
 // cats libs -- maintain version agreement or whatever
 val catsVersion = "1.1.0"
-val nlpdataVersion = "0.2.0-SNAPSHOT"
-val qasrlVersion = "0.1.0-SNAPSHOT"
-val qasrlBankVersion = "0.1.0-SNAPSHOT"
-val radhocVersion = "0.1.0-SNAPSHOT"
+val nlpdataVersion = "0.2.0"
+val qasrlVersion = "0.1.0"
+val qasrlBankVersion = "0.1.0"
+val radhocVersion = "0.1.0"
 val circeVersion = "0.9.3"
 val http4sVersion = "0.18.14"
 
