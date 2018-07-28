@@ -1,0 +1,6 @@
+#!/bin/bash
+
+pushd lib/qasrl-apps
+mill browser.jvm.serve \
+     ../../site/prod/qasrl.org/data/qasrl-v2 \
+     8001

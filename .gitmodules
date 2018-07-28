@@ -1,3 +1,6 @@
 [submodule "lib/sitegen"]
 	path = lib/sitegen
 	url = https://github.com/julianmichael/sitegen.git
+[submodule "lib/qasrl-apps"]
+	path = lib/qasrl-apps
+	url = https://github.com/julianmichael/qasrl-apps.git
