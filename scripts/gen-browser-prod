@@ -1,8 +1,0 @@
-#!/bin/bash
-
-pushd lib/qasrl-apps
-mill browser.jvm.generateProd \
-     ../../site/prod/qasrl.org/data/qasrl-v2 \
-     ../../site/prod/browse.qasrl.org \
-     8002 \
-     nlp.cs.washington.edu

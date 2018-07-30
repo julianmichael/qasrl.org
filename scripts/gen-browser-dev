@@ -1,7 +1,0 @@
-#!/bin/bash
-
-pushd lib/qasrl-apps
-mill browser.jvm.generateDev \
-     ../../site/prod/qasrl.org/data/qasrl-v2 \
-     ../../site/dev/browse.qasrl.org \
-     8001
