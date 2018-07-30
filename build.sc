@@ -1,4 +1,6 @@
 import mill._, mill.scalalib._, mill.scalalib.publish._, mill.scalajslib._
+import mill.util.DummyInputStream
+import mill.eval.Result
 import coursier.maven.MavenRepository
 import ammonite.ops._
 
@@ -10,12 +12,14 @@ val kindProjectorVersion = "0.9.4"
 
 // cats libs -- maintain version agreement or whatever
 val catsVersion = "1.1.0"
+val catsEffectVersion = "0.10.1"
 val nlpdataVersion = "0.2.0"
 val qasrlVersion = "0.1.0"
 val qasrlBankVersion = "0.1.0"
 val radhocVersion = "0.1.0"
 val circeVersion = "0.9.3"
 val http4sVersion = "0.18.14"
+val declineVersion = "0.4.2"
 
 val scalatagsVersion = "0.6.7"
 val scalacssVersion = "0.5.3"
@@ -51,6 +55,24 @@ trait CommonModule extends ScalaModule {
 
 trait CommonMainModule extends CommonModule {
   def scalaVersion = thisScalaVersion
+
+  def runMainFn = T.task { (mainClass: String, args: Seq[String]) =>
+    import mill.modules.Jvm
+    import mill.eval.Result
+    try Result.Success(
+      Jvm.interactiveSubprocess(
+        mainClass,
+        runClasspath().map(_.path),
+        forkArgs(),
+        forkEnv(),
+        args,
+        workingDir = ammonite.ops.pwd
+      )
+    ) catch {
+      case e: InteractiveShelloutException =>
+        Result.Failure("subprocess failed")
+    }
+  }
 }
 
 trait CrossPlatformModule extends ScalaModule {
@@ -72,13 +94,19 @@ trait JsPlatform extends CrossPlatformModule with ScalaJSModule {
   def platformSegment = "js"
 }
 
+import $file.lib.`qasrl-apps`.{build => Apps}
+object apps extends Apps.Build {
+  def buildRoot = build.millSourcePath / "lib" / "qasrl-apps"
+}
+
 import $file.lib.sitegen.scripts.ScalatexBuild
 object `qasrl-site` extends CommonMainModule with ScalatexBuild.ScalatexModule {
 
   def moduleDeps = Seq(sitegen.jvm)
 
   def ivyDeps = super.ivyDeps() ++ Agg(
-    ivy"com.lihaoyi::ammonite-ops:1.1.2"
+    ivy"org.typelevel::cats-effect::$catsEffectVersion",
+    ivy"com.monovore::decline::$declineVersion"
   )
 
   def scalatexSources = T.sources(
@@ -88,8 +116,200 @@ object `qasrl-site` extends CommonMainModule with ScalatexBuild.ScalatexModule {
   def sources = T.sources(
     millSourcePath / "src" / "scala"
   )
+}
 
-  def generate() = T.command {
-    run()
+object tasks extends Module {
+
+  implicit val wd = build.millSourcePath
+
+  val siteRoot = build.millSourcePath / "site"
+
+  val devMainSiteRoot     = siteRoot / "dev"  / "qasrl.org"
+  val prodMainSiteRoot    = siteRoot / "prod" / "qasrl.org"
+
+  def qasrlBankDataPath = T.input(
+    PathRef(prodMainSiteRoot / "data")
+  )
+
+  def qasrlBankDownload = T {
+    val dataPath = qasrlBankDataPath().path
+    val tarPath =  dataPath / "qasrl-v2.tar"
+    if(!exists(tarPath)) {
+      mkdir! dataPath
+      System.out.println("Downloading the QA-SRL Bank 2.0...")
+      %("curl", "-o", tarPath, "http://qasrl.org/data/qasrl-v2.tar")
+      %("tar",  "xf", tarPath, "-C", dataPath)
+    }
+    PathRef(dataPath / "qasrl-v2")
+  }
+
+  val devBrowserPort  = 8001
+  val devBrowserRoot  = siteRoot / "dev" / "browse.qasrl.org"
+
+  val prodBrowserPort = 8011
+  val prodBrowserRoot = siteRoot / "prod" / "browse.qasrl.org"
+  val prodBrowserApiDomain = "nlp.cs.washington.edu"
+  val prodBrowserPageUrlPrefix = "http://browse.qasrl.org"
+
+  // can't serve local dev version right now -- point to prod demo server
+  val devDemoPort      = 5050
+  val devDemoApiDomain = "nlp.cs.washington.edu"
+  val devDemoRoot      = siteRoot / "dev" / "demo.qasrl.org"
+
+  val prodDemoPort      = 5050
+  val prodDemoApiDomain = "nlp.cs.washington.edu"
+  val prodDemoRoot      = siteRoot / "prod" / "demo.qasrl.org"
+  // enable testing with prod demo server by having no CORS restrictions
+  val prodDemoPageUrlPrefix = None // Some("http://demo.qasrl.org")
+  val prodDemoServiceUrl = "http://172.28.4.59:5000/api/parser/"
+
+  object dev extends Module {
+    object site extends Module {
+      def gen() = T.command {
+        val runMain = `qasrl-site`.runMainFn()
+        runMain(
+          "qasrlsite.Generate", Seq(
+            "--site-root",       devMainSiteRoot.toString,
+            "--local-links"
+          )
+        )
+      }
+    }
+    object browser extends Module {
+      def gen() = T.command {
+        val browserJSPath = apps.browser.js.fastOpt().path
+        val browserJSDepsPath = apps.browser.js.aggregatedJSDeps().path
+        val runMain = apps.browser.jvm.runMainFn()
+        runMain(
+          "qasrl.apps.browser.Generate", Seq(
+            "--qasrl-bank",      qasrlBankDownload().path.toString,
+            "--api-url",         s"http://localhost:$devBrowserPort",
+            "--browser-js",      browserJSPath.toString,
+            "--browser-jsdeps",  browserJSDepsPath.toString,
+            "--site-root",       devBrowserRoot.toString,
+            "--local-links"
+          )
+        )
+      }
+      def serve() = T.command {
+        if (T.ctx().log.inStream == DummyInputStream){
+          Result.Failure("server needs to be run with the -i/--interactive flag")
+        } else {
+          val runMain = apps.browser.jvm.runMainFn()
+          runMain(
+            "qasrl.apps.browser.Serve", Seq(
+              "--qasrl-bank", qasrlBankDownload().path.toString,
+              "--port",       s"$devBrowserPort"
+            )
+          )
+        }
+      }
+    }
+    object demo extends Module {
+      def gen() = T.command {
+        val demoJSPath = apps.demo.js.fastOpt().path.toString
+        val demoJSDepsPath = apps.demo.js.aggregatedJSDeps().path.toString
+        val runMain = apps.demo.jvm.runMainFn()
+        runMain(
+          "qasrl.apps.demo.Generate", Seq(
+            "--api-url",      s"http://$devDemoApiDomain:$devDemoPort",
+            "--demo-js",      demoJSPath,
+            "--demo-jsdeps",  demoJSDepsPath,
+            "--site-root",    devDemoRoot.toString,
+            "--local-links"
+          )
+        )
+      }
+    }
+  }
+
+  def s3Sync(
+    directory: Path,
+    bucketUrl: String
+  ) = %(
+    "aws", "s3", "sync", directory.toString, bucketUrl,
+    "--exclude", "**/.DS_Store",
+    "--exclude", "**/.gitignore",
+    "--profile", "cse-julian"
+  )
+
+  object prod extends Module {
+    object site extends Module {
+      def gen() = T.command {
+        val runMain = `qasrl-site`.runMainFn()
+        runMain(
+          "qasrlsite.Generate", Seq(
+            "--site-root",       prodMainSiteRoot.toString
+          )
+        )
+      }
+      def deploy() = T.command {
+        s3Sync(prodMainSiteRoot, "s3://qasrl.org")
+      }
+    }
+    object browser extends Module {
+      def gen() = T.command {
+        val browserJSPath = apps.browser.js.fullOpt().path
+        val browserJSDepsPath = apps.browser.js.aggregatedJSDeps().path
+        val runMain = apps.browser.jvm.runMainFn()
+        runMain(
+          "qasrl.apps.browser.Generate", Seq(
+            "--qasrl-bank",      qasrlBankDownload().path.toString,
+            "--api-url",         s"http://$prodBrowserApiDomain:$prodBrowserPort",
+            "--browser-js",      browserJSPath.toString,
+            "--browser-jsdeps",  browserJSDepsPath.toString,
+            "--site-root",       prodBrowserRoot.toString
+          )
+        )
+      }
+      def serve() = T.command {
+        if (T.ctx().log.inStream == DummyInputStream){
+          Result.Failure("server needs to be run with the -i/--interactive flag")
+        } else {
+          val runMain = apps.browser.jvm.runMainFn()
+          runMain(
+            "qasrl.apps.browser.Serve", Seq(
+              "--qasrl-bank", qasrlBankDownload().path.toString,
+              "--port",       s"$prodBrowserPort",
+              "--domain",     prodBrowserPageUrlPrefix
+            )
+          )
+        }
+      }
+      def deploy() = T.command {
+        s3Sync(prodBrowserRoot, "s3://browse.qasrl.org")
+      }
+    }
+    object demo extends Module {
+      def gen() = T.command {
+        val demoJSPath = apps.demo.js.fullOpt().path.toString
+        val demoJSDepsPath = apps.demo.js.aggregatedJSDeps().path.toString
+        val runMain = apps.demo.jvm.runMainFn()
+        runMain(
+          "qasrl.apps.demo.Generate", Seq(
+            "--api-url",      s"http://$prodDemoApiDomain:$prodDemoPort",
+            "--demo-js",      demoJSPath,
+            "--demo-jsdeps",  demoJSDepsPath,
+            "--site-root",    prodDemoRoot.toString
+          )
+        )
+      }
+      def serve() = T.command {
+        if (T.ctx().log.inStream == DummyInputStream){
+          Result.Failure("server needs to be run with the -i/--interactive flag")
+        } else {
+          val runMain = apps.demo.jvm.runMainFn()
+          runMain(
+            "qasrl.apps.demo.Serve", Seq(
+              "--service-url", prodDemoServiceUrl,
+              "--port",        s"$prodDemoPort",
+            ) ++ prodDemoPageUrlPrefix.toSeq.flatMap(d => Seq("--domain", d))
+          )
+        }
+      }
+      def deploy() = T.command {
+        s3Sync(prodDemoRoot, "s3://demo.qasrl.org")
+      }
+    }
   }
 }

@@ -1,6 +1,9 @@
 @package qasrlsite
-@import sitegen.render.{CDNLinks => L}
+
 @import sitegen.render._
+
+@param L: Links
+
 @html(lang := "en")
   @head
     @meta(charset := "utf-8")
