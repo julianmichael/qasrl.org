@@ -110,8 +110,8 @@ object Generate {
     }
 
     val htmlFiles: Map[Frag, Path] = Map(
-      Index(config) -> siteRoot.resolve("index.html"),
-      Error(config) -> siteRoot.resolve("error.html")
+      pages.Index(config) -> siteRoot.resolve("index.html"),
+      pages.Error(config) -> siteRoot.resolve("error.html")
     )
 
     val assetFolders: Map[Path, Path] = Map(

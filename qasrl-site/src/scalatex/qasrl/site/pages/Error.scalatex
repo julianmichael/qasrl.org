@@ -1,4 +1,4 @@
-@package qasrl.site
+@package qasrl.site.pages
 
 @import sitegen.render._
 

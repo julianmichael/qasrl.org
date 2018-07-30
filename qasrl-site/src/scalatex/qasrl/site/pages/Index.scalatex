@@ -1,4 +1,4 @@
-@package qasrl.site
+@package qasrl.site.pages
 
 @param config: GenerationConfig
 
