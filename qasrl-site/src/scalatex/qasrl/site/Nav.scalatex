@@ -1,4 +1,4 @@
-@package qasrlsite
+@package qasrl.site
 @import scalatags.Text.all.Frag
 @param brand: Frag
 @param sections: List[NavSection]

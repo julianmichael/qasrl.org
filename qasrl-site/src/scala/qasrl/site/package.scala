@@ -1,7 +1,8 @@
+package qasrl
 import sitegen.data.References
 import sitegen.data.Authors
 
-package object qasrlsite {
+package object site {
 
   val publications = {
     import References._

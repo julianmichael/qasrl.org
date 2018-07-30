@@ -1,4 +1,4 @@
-@package qasrlsite
+@package qasrl.site
 
 @import sitegen.render
 @import sitegen.data.Authors._

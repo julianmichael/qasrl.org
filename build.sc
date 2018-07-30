@@ -168,7 +168,7 @@ object tasks extends Module {
       def gen() = T.command {
         val runMain = `qasrl-site`.runMainFn()
         runMain(
-          "qasrlsite.Generate", Seq(
+          "qasrl.site.Generate", Seq(
             "--site-root",       devMainSiteRoot.toString,
             "--local-links"
           )
@@ -238,7 +238,7 @@ object tasks extends Module {
       def gen() = T.command {
         val runMain = `qasrl-site`.runMainFn()
         runMain(
-          "qasrlsite.Generate", Seq(
+          "qasrl.site.Generate", Seq(
             "--site-root",       prodMainSiteRoot.toString
           )
         )

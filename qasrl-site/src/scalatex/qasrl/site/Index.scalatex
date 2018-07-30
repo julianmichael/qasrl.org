@@ -1,8 +1,6 @@
-@package qasrlsite
+@package qasrl.site
 
-@import sitegen.render.Links
-
-@param L: Links
+@param config: GenerationConfig
 
 @import sitegen.render
 @import sitegen.render.{Styles => S}
@@ -25,7 +23,7 @@
     @meta(
       name := "viewport",
       content := "width=device-width, initial-scale=1, shrink-to-fit=no")
-    @L.bootstrapLink
+    @config.bootstrapLink
     @tag("title"){QA-SRL}
     @S.render(scalatagsStyleTagRenderer, implicitly[scalacss.internal.Env])
   @body(
@@ -105,5 +103,5 @@
 
     @Nav("QA-SRL", reversedSections.reverse)
 
-    @L.clipboardScripts
-    @L.bootstrapScripts
+    @config.clipboardScripts
+    @config.bootstrapScripts
