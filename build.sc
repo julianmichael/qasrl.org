@@ -37,7 +37,7 @@ object sitegen extends SitegenBuild.SitegenModule {
 }
 
 trait CommonModule extends ScalaModule {
-  def scalacOptions = Seq(
+  override def scalacOptions = Seq(
     "-unchecked",
     "-deprecation",
     "-feature",
@@ -104,7 +104,7 @@ object `qasrl-site` extends CommonMainModule with ScalatexBuild.ScalatexModule {
 
   def moduleDeps = Seq(sitegen.jvm)
 
-  def ivyDeps = super.ivyDeps() ++ Agg(
+  override def ivyDeps = super.ivyDeps() ++ Agg(
     ivy"org.typelevel::cats-effect::$catsEffectVersion",
     ivy"com.monovore::decline::$declineVersion"
   )
@@ -148,16 +148,16 @@ object tasks extends Module {
 
   val prodBrowserPort = 8011
   val prodBrowserRoot = siteRoot / "prod" / "browse.qasrl.org"
-  val prodBrowserApiDomain = "nlp.cs.washington.edu"
+  val prodBrowserApiDomain = "nlp1.cs.washington.edu"
   val prodBrowserPageUrlPrefix = "http://browse.qasrl.org"
 
   // can't serve local dev version right now -- point to prod demo server
   val devDemoPort      = 5050
-  val devDemoApiDomain = "nlp.cs.washington.edu"
+  val devDemoApiDomain = "nlp1.cs.washington.edu"
   val devDemoRoot      = siteRoot / "dev" / "demo.qasrl.org"
 
   val prodDemoPort      = 5050
-  val prodDemoApiDomain = "nlp.cs.washington.edu"
+  val prodDemoApiDomain = "nlp1.cs.washington.edu"
   val prodDemoRoot      = siteRoot / "prod" / "demo.qasrl.org"
   // enable testing with prod demo server by having no CORS restrictions
   val prodDemoPageUrlPrefix = None // Some("http://demo.qasrl.org")

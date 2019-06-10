@@ -1,6 +1,6 @@
 @package qasrl.site.pages
 
-@import sitegen.render._
+@import qasrl.site._
 
 @param config: GenerationConfig
 

@@ -1,9 +1,13 @@
 @package qasrl.site.pages
 
+@import qasrl.site._
+
 @param config: GenerationConfig
 
 @import sitegen.render
 @import sitegen.render.{Styles => S}
+@import sitegen.render.NavSection
+@import sitegen.render.Nav
 @import sitegen.data
 @import scalacss.ScalatagsCss._
 @import scalacss.DevDefaults._
@@ -36,9 +40,9 @@
     @def sectionHeading(sectionId: String, navElement: Frag)(title: Frag) = {
       reversedSections = NavSection(navElement, sectionId) :: reversedSections
       div(
-        id := sectionId, S.anchor, 
+        id := sectionId, S.anchor,
         div(
-          S.sectionHeadingContainer, 
+          S.sectionHeadingContainer,
           h2(S.sectionHeading)(title)
         )
       )
