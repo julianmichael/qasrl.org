@@ -23,7 +23,7 @@ package object site {
     List(
       julianMichael,
       luhengHe,
-      nicholasFitzgerald,
+      nicholasFitzGerald,
       gabiStanovsky,
       ayalKlein,
       idoDagan,

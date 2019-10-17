@@ -1,34 +1,28 @@
 import mill._, mill.scalalib._, mill.scalalib.publish._, mill.scalajslib._
-import mill.util.DummyInputStream
+import mill.api.DummyInputStream
 import mill.eval.Result
 import coursier.maven.MavenRepository
 import ammonite.ops._
 
-val thisScalaVersion = "2.12.6"
-val thisScalaJSVersion = "0.6.23"
+val thisScalaVersion = "2.12.8"
+val thisScalaJSVersion = "0.6.27"
 
 val macroParadiseVersion = "2.1.0"
 val kindProjectorVersion = "0.9.4"
 
 // cats libs -- maintain version agreement or whatever
-val catsVersion = "1.1.0"
-val catsEffectVersion = "0.10.1"
-val nlpdataVersion = "0.2.0"
-val qasrlVersion = "0.1.0"
-val qasrlBankVersion = "0.1.0"
-val radhocVersion = "0.1.0"
-val circeVersion = "0.9.3"
-val http4sVersion = "0.18.14"
-val declineVersion = "0.4.2"
+val jjmVersion = "0.1.0-SNAPSHOT"
+val qasrlVersion = "0.2.0-SNAPSHOT"
+val qasrlBankVersion = "0.2.0-SNAPSHOT"
+val radhocVersion = "0.3.0-SNAPSHOT"
+val declineVersion = "1.0.0"
 
 val scalatagsVersion = "0.6.7"
 val scalacssVersion = "0.5.3"
-val monocleVersion = "1.4.0"
 
 val scalajsDomVersion = "0.9.6"
 val scalajsJqueryVersion = "0.9.3"
-val scalajsReactVersion = "1.1.0"
-val scalajsScalaCSSVersion = "0.5.3"
+// val scalajsScalaCSSVersion = "0.5.3"
 
 // workaround for source project dependency
 import $file.lib.sitegen.{build => SitegenBuild}
@@ -60,7 +54,7 @@ trait CommonMainModule extends CommonModule {
     import mill.modules.Jvm
     import mill.eval.Result
     try Result.Success(
-      Jvm.interactiveSubprocess(
+      Jvm.runSubprocess(
         mainClass,
         runClasspath().map(_.path),
         forkArgs(),
@@ -105,8 +99,9 @@ object `qasrl-site` extends CommonMainModule with ScalatexBuild.ScalatexModule {
   def moduleDeps = Seq(sitegen.jvm)
 
   override def ivyDeps = super.ivyDeps() ++ Agg(
-    ivy"org.typelevel::cats-effect::$catsEffectVersion",
-    ivy"com.monovore::decline::$declineVersion"
+    // ivy"org.typelevel::cats-effect::$catsEffectVersion",
+    ivy"com.monovore::decline::$declineVersion",
+    ivy"com.monovore::decline-effect::$declineVersion"
   )
 
   def scalatexSources = T.sources(
@@ -148,20 +143,14 @@ object tasks extends Module {
 
   val prodBrowserPort = 8011
   val prodBrowserRoot = siteRoot / "prod" / "browse.qasrl.org"
-  val prodBrowserApiDomain = "nlp1.cs.washington.edu"
+  val prodBrowserApiDomain = "recycle.cs.washington.edu"
   val prodBrowserPageUrlPrefix = "http://browse.qasrl.org"
 
-  // can't serve local dev version right now -- point to prod demo server
-  val devDemoPort      = 5050
-  val devDemoApiDomain = "nlp1.cs.washington.edu"
-  val devDemoRoot      = siteRoot / "dev" / "demo.qasrl.org"
+  val devDemoRoot   = siteRoot / "dev" / "demo.qasrl.org"
+  val devDemoApiUrl = "http://localhost:5000/predict"
 
-  val prodDemoPort      = 5050
-  val prodDemoApiDomain = "nlp1.cs.washington.edu"
-  val prodDemoRoot      = siteRoot / "prod" / "demo.qasrl.org"
-  // enable testing with prod demo server by having no CORS restrictions
-  val prodDemoPageUrlPrefix = None // Some("http://demo.qasrl.org")
-  val prodDemoServiceUrl = "http://172.28.4.59:5000/api/parser/"
+  val prodDemoRoot   = siteRoot / "prod" / "demo.qasrl.org"
+  val prodDemoApiUrl = "http://recycle.cs.washington.edu:5000/predict"
 
   object dev extends Module {
     object site extends Module {
@@ -212,7 +201,7 @@ object tasks extends Module {
         val runMain = apps.demo.jvm.runMainFn()
         runMain(
           "qasrl.apps.demo.Generate", Seq(
-            "--api-url",      s"http://$devDemoApiDomain:$devDemoPort",
+            "--api-url",      devDemoApiUrl,
             "--demo-js",      demoJSPath,
             "--demo-jsdeps",  demoJSDepsPath,
             "--site-root",    devDemoRoot.toString,
@@ -287,25 +276,12 @@ object tasks extends Module {
         val runMain = apps.demo.jvm.runMainFn()
         runMain(
           "qasrl.apps.demo.Generate", Seq(
-            "--api-url",      s"http://$prodDemoApiDomain:$prodDemoPort",
+            "--api-url",      prodDemoApiUrl,
             "--demo-js",      demoJSPath,
             "--demo-jsdeps",  demoJSDepsPath,
             "--site-root",    prodDemoRoot.toString
           )
         )
-      }
-      def serve() = T.command {
-        if (T.ctx().log.inStream == DummyInputStream){
-          Result.Failure("server needs to be run with the -i/--interactive flag")
-        } else {
-          val runMain = apps.demo.jvm.runMainFn()
-          runMain(
-            "qasrl.apps.demo.Serve", Seq(
-              "--service-url", prodDemoServiceUrl,
-              "--port",        s"$prodDemoPort",
-            ) ++ prodDemoPageUrlPrefix.toSeq.flatMap(d => Seq("--domain", d))
-          )
-        }
       }
       def deploy() = T.command {
         s3Sync(prodDemoRoot, "s3://demo.qasrl.org")

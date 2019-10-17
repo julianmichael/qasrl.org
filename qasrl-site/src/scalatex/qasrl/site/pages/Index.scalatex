@@ -6,7 +6,6 @@
 
 @import sitegen.render
 @import sitegen.render.{Styles => S}
-@import sitegen.render.NavSection
 @import sitegen.render.Nav
 @import sitegen.data
 @import scalacss.ScalatagsCss._
@@ -36,17 +35,10 @@
     attr("data-target") := "#navbarCollapse",
     attr("data-offset") := "200")
 
-    @var reversedSections = List.empty[NavSection]
-    @def sectionHeading(sectionId: String, navElement: Frag)(title: Frag) = {
-      reversedSections = NavSection(navElement, sectionId) :: reversedSections
-      div(
-        id := sectionId, S.anchor,
-        div(
-          S.sectionHeadingContainer,
-          h2(S.sectionHeading)(title)
-        )
-      )
+    @object navStateContainer {
+      implicit val navState = new Nav.State
     }
+    @import navStateContainer._
 
     @tag("main")(id := "home", role := "main", S.anchor, S.mainContainer)
       @div(S.leadBannerContainer)
@@ -64,7 +56,7 @@
         @a(S.leadButton, S.leadButton0, href := "http://demo.qasrl.org", role := "button")
           Live Demo »
 
-      @sectionHeading("about", "About")(
+      @Nav.sectionHeading("about", "About")(
         "About the\nQA-SRL Project"
       )
       @p
@@ -95,17 +87,17 @@
         This results in interpretable structures that can be annotated by non-experts at scale,
         which have the further advantage of being agnostic to choices of linguistic formalism.
 
-      @sectionHeading("news", "News"){News}
+      @Nav.sectionHeading("news", "News"){News}
       @ul(S.list)(News())
 
-      @sectionHeading("publications", "Publications"){Publications}
-      @div(publications.map(render.bibEntry))
+      @Nav.sectionHeading("publications", "Publications"){Publications}
+      @div(publications.map(render.bibEntryWeb))
 
-      @sectionHeading("team", "Team"){Team}
+      @Nav.sectionHeading("team", "Team"){Team}
       @div(cls := "container-fluid")
         @div(cls := "row")(team.map(render.collaborator))
 
-    @Nav("QA-SRL", reversedSections.reverse)
+    @Nav.bar("QA-SRL")
 
     @config.clipboardScripts
     @config.bootstrapScripts

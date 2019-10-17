@@ -4,6 +4,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.Files
 
+import cats.effect.ExitCode
 import cats.effect.IO
 import cats.implicits._
 
@@ -12,34 +13,27 @@ import scalacss.DevDefaults._
 import scalatags.Text.all.Frag
 
 import com.monovore.decline._
+import com.monovore.decline.effect._
 
-object Generate {
-
-  def main(args: Array[String]): Unit = {
-    val command = Command(
+object Generate extends CommandIOApp(
       name = "mill `qasrl-site`.jvm.run",
-      header = "Generate the static QA-SRL website."
-    ) {
-      val siteRoot = Opts.option[Path](
-        "site-root", metavar = "path", help = "Root directory in which to place the generated website."
-      )
-      val useLocalLinks = Opts.flag(
-        "local-links", help = "Use links to site-local versions of Bootstrap dependencies"
-      ).orFalse
+      header = "Generate the static QA-SRL website."){
 
-      (siteRoot, useLocalLinks).mapN(program)
-    }
-    val result = command.parse(args) match {
-      case Left(help) => IO { System.err.println(help) }
-      case Right(main) => main
-    }
-    result.unsafeRunSync
+  def main: Opts[IO[ExitCode]] = {
+    val siteRoot = Opts.option[Path](
+      "site-root", metavar = "path", help = "Root directory in which to place the generated website."
+    )
+    val useLocalLinks = Opts.flag(
+      "local-links", help = "Use links to site-local versions of Bootstrap dependencies"
+    ).orFalse
+
+    (siteRoot, useLocalLinks).mapN(program)
   }
 
   def program(
     siteRoot: Path,
     useLocalLinks: Boolean
-  ): IO[Unit] = {
+  ): IO[ExitCode] = {
 
     import sitegen.render._
 
@@ -150,6 +144,7 @@ object Generate {
         writeFile(path, "<!doctype html>\n" + html.render)
         System.out.println(s"Wrote $path")
       }
+      ExitCode.Success
     }
   }
 }

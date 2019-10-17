@@ -4,3 +4,6 @@
 [submodule "lib/qasrl-apps"]
 	path = lib/qasrl-apps
 	url = https://github.com/julianmichael/qasrl-apps.git
+[submodule "lib/nrl-qasrl"]
+	path = lib/nrl-qasrl
+	url = https://github.com/julianmichael/nrl-qasrl.git
