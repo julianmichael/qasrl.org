@@ -42,21 +42,13 @@
 
     @tag("main")(id := "home", role := "main", S.anchor, S.mainContainer)
       @div(S.leadBannerContainer)
-        @h1{Introducing QA-SRL Bank 2.0}
+        @h1{Browse QA-SRL + QANom}
         @p(S.leadText)
-          The first large-scale QA-SRL dataset and high-quality parser
+          QA-SRL with nominalizations on 8,000 sentences.
         @a(S.leadButton, S.leadButton0, href := "http://browse.qasrl.org", role := "button")
           Explore the data »
-        @a(S.leadButton, S.leadButton1, href := "http://arxiv.org/abs/1805.05377", role := "button")
-          Paper »
-        @a(S.leadButton, S.leadButton2, href := "https://github.com/uwnlp/qasrl-bank", role := "button")
-          Download »
-        @a(S.leadButton, S.leadButton3, href := "https://github.com/nafitzgerald/nrl-qasrl", role := "button")
-          Model »
-        @a(S.leadButton, S.leadButton0, href := "http://demo.qasrl.org", role := "button")
-          Live Demo »
 
-      @Nav.sectionHeading("about", "About")(
+      @Nav.sectionHeading("about", "About", true)(
         "About the\nQA-SRL Project"
       )
       @p
@@ -87,13 +79,10 @@
         This results in interpretable structures that can be annotated by non-experts at scale,
         which have the further advantage of being agnostic to choices of linguistic formalism.
 
-      @Nav.sectionHeading("news", "News"){News}
-      @ul(S.list)(News())
-
-      @Nav.sectionHeading("publications", "Publications"){Publications}
+      @Nav.sectionHeading("publications", "Publications", true){Publications}
       @div(publications.map(render.bibEntryWeb))
 
-      @Nav.sectionHeading("team", "Team"){Team}
+      @Nav.sectionHeading("team", "Team", true){Team}
       @div(cls := "container-fluid")
         @div(cls := "row")(team.map(render.collaborator))
 

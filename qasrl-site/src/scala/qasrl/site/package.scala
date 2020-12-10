@@ -7,6 +7,9 @@ package object site {
   val publications = {
     import References._
     List(
+      klein2020qanom,
+      pyatkin2020qadiscourse,
+      roit2020controlled,
       fitzGerald18qasrl,
       michael18qamr,
       stanovsky18supoie,
@@ -22,10 +25,10 @@ package object site {
     import Authors._
     List(
       julianMichael,
-      luhengHe,
-      nicholasFitzGerald,
-      gabiStanovsky,
       ayalKlein,
+      paulRoit,
+      valentinaPyatkin,
+      gabiStanovsky,
       idoDagan,
       lukeZettlemoyer
     )
