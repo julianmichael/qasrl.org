@@ -109,7 +109,8 @@ object Generate extends CommandIOApp(
     )
 
     val assetFolders: Map[Path, Path] = Map(
-      Paths.get("assets/images") -> siteRoot.resolve("images")
+      Paths.get("assets/images") -> siteRoot.resolve("images"),
+      Paths.get("assets/pubs") -> siteRoot.resolve("pubs")
     )
 
     IO {
