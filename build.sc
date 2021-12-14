@@ -219,7 +219,7 @@ object tasks extends Module {
     "aws", "s3", "sync", directory.toString, bucketUrl,
     "--exclude", "**/.DS_Store",
     "--exclude", "**/.gitignore",
-    "--profile", "cse-julian"
+    "--profile", "qasrl.org-webmaster"
   )
 
   object prod extends Module {
