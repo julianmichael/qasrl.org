@@ -23,7 +23,7 @@ Our goal is to advance the state of the art in broad-coverage natural language u
 We believe the way forward is with new datasets that are:
 
 - **Crowdsourced**: modern machine learning methods require big training sets, which means scalability is a top priority.
-- **Richly structured**: in order to improve over [powerful](https://allennlp.org/elmo) [representations](https://blog.openai.com/language-unsupervised/) learned from unlabeled data, we need strong, structured supervision signal.
+- **Richly structured**: in order to improve over powerful representations learned from unlabeled data, we need strong, structured supervision signal.
 - **Extensible**: annotation schemas should be flexible enough to accommodate new semantic phenomena without requiring expensive rounds of reannotation or brittle postprocessing rules.
 
 Our [research](#publications) explores a variety of points in the design space spanned by these criteria. The common feature between our projects is **using natural language to annotate natural language**. This results in interpretable structures that can be annotated by non-experts at scale, which have the further advantage of being agnostic to choices of linguistic formalism.
