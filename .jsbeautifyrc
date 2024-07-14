@@ -1,0 +1,6 @@
+{
+  "indent_size": 2,
+  "wrap_attributes": "force",
+  "wrap_line_length": 80,
+  "preserve_line_breaks": true
+}
