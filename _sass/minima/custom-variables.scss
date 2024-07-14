@@ -1,0 +1,15 @@
+// Placeholder to allow overriding predefined variables smoothly.
+
+$base-font-family: Charter, Georgia, serif;
+$post-width: 640px;
+$toc-panel-width: 300px;
+$content-width: $post-width + $toc-panel-width + $spacing-unit;
+
+$small-line-height:  $base-line-height * 0.875 !default;
+
+$grey-color:       #828282 !default;
+$grey-color-light: lighten($grey-color, 40%) !default;
+$grey-color-dark:  darken($grey-color, 25%) !default;
+
+$aside-bg-color: lighten($brand-color, 43%) !default;
+$aside-border-color:    $border-color-01 !default;

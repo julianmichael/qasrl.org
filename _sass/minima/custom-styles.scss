@@ -1,0 +1,307 @@
+// Placeholder to allow defining custom styles that override everything else.
+// (Use `_sass/minima/custom-variables.scss` to override variable defaults)
+
+body {
+    position: relative;
+}
+
+.svg-icon {
+    fill: #{$grey-color};
+    padding-right: 5px;
+    vertical-align: text-top;
+}
+
+/**
+ * Links
+ */
+a {
+    color: $link-base-color;
+    text-decoration: none;
+
+    &:visited {
+        color: $link-visited-color;
+    }
+
+    &:hover {
+        color: $link-hover-color;
+        text-decoration: underline;
+    }
+
+    .social-media-list &:hover {
+        text-decoration: none;
+
+        .username {
+            text-decoration: underline;
+        }
+    }
+}
+
+.site-title {
+    padding-right: 45px;
+}
+
+.site-nav {
+    @media screen and (min-width: $on-medium) {
+        float: left;
+    }
+}
+
+/**
+ * Site footer
+ */
+.site-footer {
+    border-top: 1px solid $grey-color-light;
+    padding: $spacing-unit 0;
+}
+
+.footer-heading {
+    @include relative-font-size(1.125);
+    margin-bottom: $spacing-unit / 2;
+}
+
+.feed-subscribe .svg-icon {
+    padding: 5px 5px 2px 0
+}
+
+.contact-list,
+.social-media-list {
+    list-style: none;
+    margin-left: 0;
+}
+
+.social-media-list {
+    display: block;
+    margin: 0 auto;
+    li {
+        margin: 0;
+        a {
+            display: block;
+            padding: 0;
+            border: none;
+        }
+    }
+}
+
+.footer-col-wrapper,
+.social-links {
+    @include relative-font-size(0.9375);
+    color: $brand-color;
+}
+
+.footer-col-wrapper,
+.social-links {
+    color: $grey-color;
+    margin-left: -$spacing-unit / 2;
+    @extend %clearfix;
+}
+
+.footer-col {
+    float: left;
+    margin-bottom: $spacing-unit / 2;
+    padding-left: $spacing-unit / 2;
+}
+
+.footer-col-1 {
+    width: -webkit-calc(35% - (#{$spacing-unit} / 2));
+    width:         calc(35% - (#{$spacing-unit} / 2));
+}
+
+.footer-col-2 {
+    width: -webkit-calc(20% - (#{$spacing-unit} / 2));
+    width:         calc(20% - (#{$spacing-unit} / 2));
+}
+
+.footer-col-3 {
+    width: -webkit-calc(45% - (#{$spacing-unit} / 2));
+    width:         calc(45% - (#{$spacing-unit} / 2));
+}
+
+@include media-query($on-laptop) {
+    .footer-col-1,
+    .footer-col-2 {
+        width: -webkit-calc(50% - (#{$spacing-unit} / 2));
+        width:         calc(50% - (#{$spacing-unit} / 2));
+    }
+
+    .footer-col-3 {
+        width: -webkit-calc(100% - (#{$spacing-unit} / 2));
+        width:         calc(100% - (#{$spacing-unit} / 2));
+    }
+}
+
+@include media-query($on-palm) {
+    .footer-col {
+        float: none;
+        width: -webkit-calc(100% - (#{$spacing-unit} / 2));
+        width:         calc(100% - (#{$spacing-unit} / 2));
+    }
+}
+
+
+blockquote {
+    color: $text-color;
+    padding-left: 0;
+    border-left: 0;
+    @media screen and (max-width: $on-between) {
+        margin-left: $spacing-unit;
+        margin-right: $spacing-unit;
+    }
+    @media screen and (min-width: $on-between) {
+        margin-left: $spacing-unit * 2;
+        margin-right: $spacing-unit * 2;
+    }
+}
+
+.wrapper {
+    @media screen and (min-width: $on-large) {
+        max-width: calc(#{$content-width} - (#{$spacing-unit}));
+        padding-right: $spacing-unit / 2;
+        padding-left: $spacing-unit / 2;
+    }
+
+    // @media screen and (max-width: $on-large) {
+    //     max-width: calc(#{$post-width} - (#{$spacing-unit}));
+    // }
+
+    @media screen and (max-width: $on-large) {
+        max-width: $post-width;
+    }
+
+}
+
+.social-media-list {
+    li + li {
+        padding-top: 5px;
+    }
+}
+
+.post-content-toc-wrapper {
+    display: flex;
+    @media screen and (max-width: $on-large) {
+        // max-width: $post-width;
+        // margin: auto;
+        flex-direction: column;
+    }
+    @media screen and (min-width: $on-large) {
+        align-items: flex-start;
+        flex-direction: row;
+    }
+}
+
+#top {
+    position: absolute;
+    width: 100%;
+    height: 0;
+}
+
+.top-toc-title {
+    @media screen and (min-width: $on-large) {
+        display: none;
+    }
+}
+
+.floating-toc {
+    @media screen and (max-width: $on-large) {
+        .sticky-toc-title {
+            display: none;
+        }
+    }
+    @media screen and (min-width: $on-large) {
+        position: sticky;
+        top: 0;
+        margin-right: $spacing-unit;
+        width: $toc-panel-width;
+        flex-shrink: 0;
+
+        line-height: $small-line-height;
+
+        a {
+            font-size: $small-font-size;
+            color: $brand-color;
+            display: block;
+            padding: 5px;
+        }
+
+        a:hover {
+            color: $text-color;
+            // text-shadow: 0.25px 0.25px 0.25px black;
+            text-decoration: none;
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+
+        .sticky-toc-title {
+            color: $text-color !important;
+        }
+
+        .active {
+            color: $text-color;
+            background-color: rgba(0, 0, 0, 0.05);
+            // border-top: 1px;
+            // border-bottom: 1px;
+        }
+    }
+
+    ul {
+        list-style-type: "- ";
+    }
+}
+
+.post-content {
+    h1:first-child, h2:first-child {
+        margin-top: 0;
+    }
+    h1 { margin-top: $spacing-unit * 2 };
+    h2 { margin-top: $spacing-unit * 2 };
+    h3, h4, h5, h6 { margin-top: $spacing-unit };
+    @media screen and (min-width: $on-large) {
+        max-width: $post-width;
+    }
+
+    p {
+        @media screen and (min-width: $on-between) {
+            text-align: justify;
+        }
+    }
+}
+
+hr {
+    border-width: 0.5px;
+    border-color: white;
+}
+
+.aside {
+    background-color: $aside-bg-color;
+    border-style: solid;
+    border-width: 1px;
+    border-color: $aside-border-color;
+    padding: $spacing-unit / 2;
+
+    margin-bottom: $spacing-unit / 2;
+
+    > :last-child {
+        margin-bottom: 0;
+    }
+}
+
+.portrait {
+    float: right;
+    margin-left: 2rem;
+    display: inline-block;
+    width: 11rem;
+    margin-bottom: 2rem;
+    border-radius: 15px;
+}
+
+.subtitle {
+  margin-top: -1.25rem;
+  color: #888;
+}
+
+.print {
+  font-size: 10px;
+
+}
+
+.print .publink-bib {
+  display: none;
+}

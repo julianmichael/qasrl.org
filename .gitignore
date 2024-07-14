@@ -1,5 +1,11 @@
-out
-site/*
+# auto-generated files in site
+site/index.html
+site/error.html
+site/styles.css
 
-.bloop
-.metals
+vendor/bundle
+_site/
+Gemfile.lock
+.bundle
+.sass-cache
+_data/auto
