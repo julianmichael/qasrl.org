@@ -3,6 +3,7 @@
 ## Setup
 
 ```
+git submodule update --init
 bundle install
 ```
 
