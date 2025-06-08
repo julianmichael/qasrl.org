@@ -61,7 +61,6 @@ exclude:
   - vendor/gems/
   - vendor/ruby/
   - _data/pubdata/_layouts
-  - _data/pubdata/_includes
   - _data/pubdata/_sass
   - _data/pubdata/assets
 
