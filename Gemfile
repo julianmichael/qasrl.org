@@ -5,17 +5,15 @@ source "https://rubygems.org"
 #
 #     bundle exec jekyll serve
 #
-# This is the default theme for new Jekyll sites. You may change this to anything you like.
+#
 gem "jekyll", "~> 4.3.4"
+gem "jekyll-scholar", group: :jekyll_plugins
 gem "minima", "~> 2.5.2"
 gem "kramdown-parser-gfm"
 
-# Use github pages
-# gem "github-pages", "~> 216", group: :jekyll_plugins
-
-# If you have any plugins, put them here!
+# gem "github-pages", group: :jekyll_plugins
 group :jekyll_plugins do
-  gem "jekyll-scholar"
+  gem "jekyll-feed", "~> 0.12"
 end
 
 # Windows and JRuby does not include zoneinfo files, so bundle the tzinfo-data gem
